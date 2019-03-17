@@ -1,6 +1,6 @@
 ---
 title: "About Me"
-date: 2013-10-01
+date: 2013-03-16
 type: "common"
 draft: false
 ---
@@ -9,7 +9,8 @@ Hi, This is Morven Cao, graduated from [Nanjing University](http://www.nju.edu.c
 
 Reach me:
 
- - [Twitter](https://twitter.com/morvencao)
- - [Instagram](https://instagram.com/morvencao)
  - [Gmail](mailto:morvencao@gmail.com)
  - [Github](https://github.com/morvencao)
+ - [Twitter](https://twitter.com/morvencao)
+ - [Medium](https://medium.com/@morvencao)
+ - [Instagram](https://instagram.com/morvencao)
