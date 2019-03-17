@@ -33,4 +33,4 @@ description = ""
 favicon = "/favicon.ico"
 [[params.socials]]
 name = "About Me"
-link = ""
+link = "/common/about/"
