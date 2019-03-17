@@ -1,0 +1,28 @@
+version: 2
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - build:
+          context: github
+jobs:
+  build:
+    docker:
+      - image: cibuilds/hugo:latest
+    steps:
+      - checkout
+      - run:
+          name: install
+          command: |
+            apk add --update nodejs nodejs-npm
+            npm config set unsafe-perm true
+            npm install html-minifier -g
+      - run:
+          name: update theme
+          command: |
+            git submodule update --init
+      - run:
+          name: build site
+          command: |
+            make site
+            html-minifier --input-dir ./public --output-dir ./public --collapse-whitespace --file-ext html
