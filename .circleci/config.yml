@@ -18,6 +18,11 @@ jobs:
             npm config set unsafe-perm true
             npm install html-minifier -g
       - run:
+          name: sync git repo
+          command: |
+            git clone --depth 1 https://github.com/morvencao/blog.git public
+            find ./public -not -name '.git' -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf --
+      - run:
           name: update theme
           command: |
             git submodule update --init
@@ -26,3 +31,22 @@ jobs:
           command: |
             make site
             html-minifier --input-dir ./public --output-dir ./public --collapse-whitespace --file-ext html
+      - run:
+          name: setup git
+          command: |
+            git config --global credential.helper 'cache --timeout=120'
+            git config --global user.email "morvencao@gmail.com"
+            git config --global user.name "morvencao.CI"
+      - deploy:
+          name: push newest site
+          command: |
+            export msg=$(git log --pretty=format:%s -1)
+            cd public
+            cp index.xml atom.xml
+            if [ -n "$(git status --porcelain)" ]; then
+              git add .
+              git commit --allow-empty -m "$msg"
+              git push -q https://${GITHUB_TOKEN}@github.com/morvencao/blog.git master --force
+            else
+              echo "no changes";
+            fi
