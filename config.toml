@@ -1,4 +1,4 @@
-baseURL = "https://morvencao.github.io/"
+baseURL = "https://morvencao.life/"
 languageCode = "en-us"
 title = "Morven's Blog"
 theme = "yinyang"
@@ -8,7 +8,7 @@ canonifyURLs = true
 
 [author]
   name = "Morven Cao"
-  homepage = "https://morvencao.github.io/"
+  homepage = "https://morvencao.life/"
 
 [languages]
   [languages.en]
