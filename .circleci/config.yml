@@ -20,7 +20,7 @@ jobs:
       - run:
           name: sync git repo
           command: |
-            git clone --depth 1 https://github.com/morvencao/blog.git public
+            git clone --depth 1 https://github.com/morvencao/morvencao.github.io.git public
             find ./public -not -name '.git' -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf --
       - run:
           name: update theme
@@ -46,7 +46,7 @@ jobs:
             if [ -n "$(git status --porcelain)" ]; then
               git add .
               git commit --allow-empty -m "$msg"
-              git push -q https://${GITHUB_TOKEN}@github.com/morvencao/blog.git master --force
+              git push -q https://${GITHUB_TOKEN}@github.com/morvencao/morvencao.github.io.git master --force
             else
               echo "no changes";
             fi
