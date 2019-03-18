@@ -7,7 +7,7 @@ enableRobotsTXT = true
 canonifyURLs = true
 
 [author]
-  name = "Morven Cao"
+  name = "Morven's Life"
   homepage = "https://morven.life/"
 
 [languages]
