@@ -5,11 +5,7 @@ type: "common"
 draft: false
 ---
 
-Hi, This is Morven Cao, graduated from [Nanjing University](http://www.nju.edu.cn/) with Bechalor and Master degree in 2015, now working as a software engineer at [IBM](http://www.ibm.com/). 
-
-I am an IT developer focusing on cloud technology, and a strong advocate and believer of Open Source Software. I generally use `morvencao` as my id on the Internet. 
-
-In spare time, I love reading, thinking, programming and everything challenging and interesting.
+Hi, This is Morven, graduated from [Nanjing University](http://www.nju.edu.cn/) with Bechalor and Master degree in 2015, now working as a software engineer at [IBM](http://www.ibm.com/) focusing on cloud technology. I generally use `morvencao` as my id on the Internet. I am a strong advocate and believer of Open Source Software and love reading, thinking, programming and everything challenging and interesting.
 
 Reach me:
 
