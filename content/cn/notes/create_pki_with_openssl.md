@@ -9,21 +9,21 @@ draft: false
 
 ## SSL证书生成工具
 
-有些情形只需要公私密钥对就够了，不需要数字证书，比如私有的`SSH`服务。但是对于一些要求身份认证的情形，则需要对公钥进行数字签名形成数字证书。
+有以下两种常见的工具来生成`RSA`公私密钥对:
 
-有两种常见的工具来生成`RSA`公私密钥对：
+> Note: 有些情形只需要公私密钥对就够了，不需要数字证书，比如私有的`SSH`服务。但是对于一些要求身份认证的情形，则需要对公钥进行数字签名形成数字证书。
 
 - `ssh-keygen`
 - `openssl genrsa`
 
-其实`ssh-keygen`底层也是使用`OpenSSL`提供的库来生成密钥。
+实际上`ssh-keygen`底层也是使用`OpenSSL`提供的库来生成密钥。
 
 ### ssh-keygen
 
 举例来说，我们要生成`2048`位RSA密钥对：
 
+```
 $ ssh-keygen -b 2048 -t rsa -f foo_rsa
- 
 Generating public/private rsa key pair.
 Enter passphrase (empty for no passphrase): 
 Enter same passphrase again: 
@@ -43,11 +43,12 @@ The key's randomart image is:
 |       . ..o o.oo|
 |         .. . oE.|
 +-----------------+
+```
 
-`-b`指定密钥位数
-`-t`指定密钥类型：`rsa`，`dsa`, `ecdsa`
+- `-b`指定密钥位数
+- `-t`指定密钥类型：`rsa`，`dsa`, `ecdsa`
 
-如果密钥对用于`ssh`，那么习惯上私钥命名为`id_rsa`,对应的公钥就是`id_rsa.pub`，然后可以使用`ssh-copy-id`把密钥追加到远程主机的`.ssh/authorized_key`文件里：
+> Note: 如果密钥对用于`ssh`，那么习惯上私钥命名为`id_rsa`,对应的公钥就是`id_rsa.pub`，然后可以使用`ssh-copy-id`把密钥追加到远程主机的`.ssh/authorized_key`文件里。
 
 ```
 $ ssh-copy-id -i ~/.ssh/id_rsa.pub user@mc-lnx
