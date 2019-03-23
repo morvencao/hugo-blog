@@ -1,6 +1,6 @@
 baseURL = "https://morven.life/"
 languageCode = "en-us"
-title = "Morven's Blog"
+title = "Morven's Life"
 theme = "yinyang"
 DefaultContentLanguage = "cn"
 enableRobotsTXT = true
