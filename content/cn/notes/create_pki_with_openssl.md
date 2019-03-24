@@ -5,7 +5,7 @@ type: "notes"
 draft: false
 ---
 
-在上一篇文章[深入理解PKI系统的与数字证书(/notes/the_pki_and_digital_certificate/)中介绍了PKI系统的基本组成以及CA认证中心的主要作用，以及X.509证书基本标准。今天，我们继续应用已经学习的理论知识构建一套自己的PKI/CA数字证书信任体系。
+在上一篇文章[深入理解PKI系统的与数字证书](/notes/the_pki_and_digital_certificate/)中介绍了PKI系统的基本组成以及CA认证中心的主要作用，以及X.509证书基本标准。今天，我们继续应用已经学习的理论知识构建一套自己的PKI/CA数字证书信任体系。
 
 ## SSL证书生成工具
 
