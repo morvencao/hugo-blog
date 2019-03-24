@@ -1,5 +1,5 @@
 ---
-title: "深入理解PKI系统的与数字证书"
+title: "深入理解PKI系统的与CA中心"
 date: 2014-11-12
 type: "notes"
 draft: false
