@@ -9,13 +9,9 @@ draft: false
 
 关于数字签名和数字证书的概念，有一篇非常经典的[文章](http://www.youdzone.com/signature.html)，本文的大部分内容来自于那篇文章，喜欢读英文原版的请移步至：http://www.youdzone.com/signature.html
 
-Bob生成了自己的（公钥，私钥）对：
+Bob生成了自己的（公钥，私钥）对，将私钥自己保存，并将公钥分发给了他的朋友们：Pat，Susan，Daug，
 
-![](https://i.loli.net/2019/03/23/5c95cfd7841f4.jpg)
-
-Bob将自己的公钥分发给了他的朋友们：Pat，Susan，Daug
-
-![](https://i.loli.net/2019/03/23/5c95d0f1adeff.jpg)
+![](https://i.loli.net/2019/03/25/5c9847f814e34.jpg)
 
 Susan要给Bob写一封保密的信件，写完后用Bob的公钥加密，就可以达到保密的效果。Bob收到信件之后用自己的私钥来解密，就可以看到信件的内容。这里假设Bob的私钥没有泄露（私钥是十分敏感的信息，一定要注意保管，泄露私钥那么文章里很多假设都不成立），即使信件被别人截获，信件内容也无法解密，也就是说这封信的内容不会有第三个人知道。
 
