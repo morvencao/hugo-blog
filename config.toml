@@ -1,4 +1,4 @@
-baseURL = "https://blog.morven.life/"
+baseURL = "https://morven.life/"
 languageCode = "en-us"
 title = "Morven's Life"
 theme = "yinyang"
@@ -8,7 +8,7 @@ canonifyURLs = true
 
 [author]
   name = "Morven's Life"
-  homepage = "https://blog.morven.life/"
+  homepage = "https://morven.life/"
 
 [languages]
   [languages.en]
@@ -33,4 +33,4 @@ description = ""
 favicon = "/favicon.ico"
 [[params.socials]]
 name = "About Me"
-link = "https://morven.life/"
+link = "/common/about/"
