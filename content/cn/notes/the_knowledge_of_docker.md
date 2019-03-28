@@ -1,5 +1,5 @@
 ---
-title: "一些容易被忽视的docker知识"
+title: "容易被忽视的docker知识"
 date: 2018-03-14
 type: "notes"
 draft: false
