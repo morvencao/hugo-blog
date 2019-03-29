@@ -1,5 +1,5 @@
 ---
-title: "webpack使用小结"
+title: "Webpack使用小结"
 date: 2016-11-20
 type: "notes"
 draft: false
