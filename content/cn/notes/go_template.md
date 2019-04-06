@@ -1,5 +1,5 @@
 ---
-title: "深入理解GoTemplate"
+title: "深入理解Go Template"
 date: 2018-08-24
 type: "notes"
 draft: false
