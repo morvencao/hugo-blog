@@ -1,6 +1,6 @@
 ---
-title: "创建最小的docker镜像"
-date: 2018-10-02
+title: "创建最小Docker镜像"
+date: 2019-01-20
 type: "posts"
 draft: false
 ---
