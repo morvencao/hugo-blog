@@ -68,13 +68,9 @@ draft: false
 
 [RDM](http://avi.alkalay.net/software/RDM/)是一个用来切换分辨率的开源软件，使用方法也很简单，其中带⚡️标志的才是开启了HiDPI的分辨率。
 
-### 总结
+### Tips
 
 1. 开启HiDPI仅仅是改善显示效果并不能达到MacBook Pro本身屏幕的那种细腻程度，所以推荐新款的MacBookPro搭配使用4K或者5K显示器
 2. 有时候不同的刷新率对于对线材和接口是有要求的，比如对于4K或者5K显示器，推荐使用type-C线缆，至少也得是HDMI或者DP电缆
 
 > Note: 我目前在使用的[4K显示器](https://item.jd.com/1762516.html)在开启HiDPI之后发现RDM不能切换到理想的Retina显示效果，要么屏幕闪烁，要么黑屏，几经周折发现是使用的HDMI线缆有问题，更换了HDMI线缆之后，使用[绿联拓展坞](https://item.jd.com/5841257.html)转换可以可以完美呈现预期的显示效果。
-
-
-
-
