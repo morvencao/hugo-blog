@@ -302,3 +302,26 @@ fi
 ```
 
 有了上面这段trap命令，即使当Shell脚本操作对应的共享区的时候有人手动Kill掉对应的Shell脚本进程，文件锁也会被清理干净。需要注意的是，我们在捕捉到Kill信号之后删除完文件锁之后直接退出而不是继续执行。
+
+### Be Acomic
+
+很多时候我们需要一次更新一批文件，但是有可能在更新了一半之后Shell脚本出错或者有人kill掉了Shell脚本的进程。你可能会想到，就使用刚才学到的trap知识，同时对就文件做备份，一旦捕捉到出错的信号，就恢复备份。这看起来没错，但是很多时候只能解决一部分的问题。例如，我们要把一个网站里面的URL从`www.example.org`全部更新为`www.example.com`，Shell脚本的主要逻辑类似于这样：
+
+```
+for file in $(find /var/www -type f -name "*.html"); do
+    perl -pi -e 's/www.example.org/www.example.com/' $file
+done
+```
+
+正确的做法是使更新操作原子化：1. 拷贝旧目录；2. 在拷贝的目录中进行更新操作；3. 替换原目录
+
+```
+cp -a /var/www /var/www-tmp
+for file in $(find /var/www-tmp -type f -name "*.html"); do
+   perl -pi -e 's/www.example.org/www.example.com/' $file
+done
+mv /var/www /var/www-old
+mv /var/www-tmp /var/www
+```
+
+一般来说在Unix文件系统上进行最后的两次`mv`操作是非常快的（只需要替换两个目录的`inode`，而不用执行实际的拷贝操作），换句话说，容易出错的地方是更新操作，而我们将更新操作全部在拷贝的目录中执行，这样，即使出错，也不会影响原目录。这里的技巧是，我们使用双倍的硬盘空间来进行操作，任何是需要长时间打开文件的操作都是在备份目录中进行。事实上，保持一系列操作的原子性对于某些容易出错的Shell脚本来说非常重要，同时操作前备份文件也是一个好习惯。
