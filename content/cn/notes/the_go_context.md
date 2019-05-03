@@ -9,9 +9,7 @@ draft: false
 
 官方文档对于`context`包的解释是：
 
-```
-Package context defines the Context type, which carries deadlines, cancelation signals, and other request-scoped values across API boundaries and between processes.
-```
+> Package context defines the Context type, which carries deadlines, cancelation signals, and other request-scoped values across API boundaries and between processes.
 
 简单来说，`context`包是专门用来简化处理针对单个请求的多个goroutine与请求截止时间、取消信号以及请求域的数据等相关操作。一个简单的例子是在典型的go服务器程序中，每个网络请求都需要创建单独的goroutine进行处理，这些goroutine有可能涉及多个API的调用，进而可能会开启其他的goroutine；由于这些goroutine都是在处理同一个网络请求，所以它们往往需要访问一些共享的资源，比如用户认证token、请求截止时间等；而且如果请求超时或者被取消后，所有的goroutine都应该马上退出并且释放相关的资源。使用`context`，即“上下文”，可以让go开发者方便地实现这些多个goroutine之间的交互操作，跟踪并控制这些goroutine，并传递request相关的数据、取消goroutine的signal或截止日期等。
 
@@ -125,3 +123,99 @@ func WithValue(parent Context, key, val interface{}) Context
 - 不要传递值为`nil`的context给函数或者方法传递context的时候，否则在追踪的时候，就会断了树的连接；
 - context的`Value`方法应该传递必须的数据，不要什么数据都使用这个传递；context传递数据是线程安全的；
 - 可以把一个context对象传递给任意多个gorotuine，对它执行取消操作时，所有goroutine都会接收到取消信号
+
+### Context典型使用实例
+
+1. 使用`Done`方法主动取消context：
+
+```
+func process(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	respC := make(chan int)
+	// business logic
+	go func() {
+		time.Sleep(time.Second * 5)
+		respC <- 10
+	}()
+	// wait for signal
+	select {
+	case <-ctx.Done():
+		fmt.Println("cancel")
+		return errors.New("cancel")
+	case r := <-respC:
+		fmt.Println(r)
+		return nil
+	}
+}
+
+func main() {
+	wg := new(sync.WaitGroup)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg.Add(1)
+	go process(ctx, wg)
+	time.Sleep(time.Second * 2)
+	// trigger context cancel
+	cancel()
+	// wait for gorountine exit...
+	wg.Wait()
+}
+```
+
+2. 超时自动取消context：
+
+```
+func process(ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
+	for i := 0; i < 1000; i++ {
+		select {
+		case <-time.After(2 * time.Second):
+			fmt.Println("processing... ", i)
+
+		// receive cancelation signal in this channel
+		case <-ctx.Done():
+			fmt.Println("Cancel the context ", i)
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+func main() {
+    wg := new(sync.WaitGroup)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+
+	wg.Add(1)
+	go process(ctx. wg)
+	wg.Wait()
+}
+```
+
+3. 通过`WithValue`在goroutine之间传递数据：
+
+```
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	valueCtx := context.WithValue(ctx, key, "myvalue")
+
+	go watch(valueCtx)
+	time.Sleep(10 * time.Second)
+	cancel()
+
+	time.Sleep(5 * time.Second)
+}
+
+func watch(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println(ctx.Value(key), "is cancel")
+			return
+		default:
+			fmt.Println(ctx.Value(key), "int goroutine")
+			time.Sleep(2 * time.Second)
+		}
+	}
+}
+```
