@@ -5,7 +5,7 @@ type: "notes"
 draft: false
 ---
 
-从go1.7开始，正式将`context(golang.org/x/net/context)`，即“上下文”包引入官方标准库。事实上，我们经常见到它，不论是在简单的服务器代码还是在复杂的并发处理程序中，它都起到很重要的作用。今天，我们就来深入研究一下它的实现以及最佳实践。
+从go1.7开始，正式将`context(golang.org/x/net/context)`，即“上下文”包引入官方标准库。事实上，我们经常见到它，不论是在一般的服务器代码还是在复杂的并发处理程序中，它都起到很重要的作用。今天，我们就来深入研究一下它的实现以及最佳实践。
 
 官方文档对于`context`包的解释是：
 
@@ -16,7 +16,7 @@ draft: false
 
 ### Context结构
 
-`context`包中核心的数据结构是一种嵌套的结构或者说是单向的继承关系的结构。基于最初的context（根context），开发者可以根据使用场景的不同定义自己的方法和数据来继承根context；正是context这种分层的组织结构，可以在每一层context都定义一些不同的特性，这种层级式的组织也使得context易于扩展，职责清晰。
+`context`包中核心的数据结构是一种嵌套的结构或者说是单向继承的结构。基于最初的context（根context），开发者可以根据使用场景的不同定义自己的方法和数据来继承根context；正是context这种分层的组织结构，允许开发者在每一层context都定义一些不同的特性，这种层级式的组织也使得context易于扩展，职责清晰。
 
 `context`包中的最基础的数据结构是一个`Context`接口：
 
@@ -41,7 +41,7 @@ type Context interface {
 `Context`接口的定义包括4个方法：
 
 - `Done`方法返回一个只读的任何类型channel；使用`Done`方法开发者可以在接收到context的取消请求，或者截止时间到了之后做一些清理操作，然后退出goroutine，释放相关资源，也可以调用`Err`方法得到context被取消的原因，或者调用`Value`方法得到上下文中的相关值；
-- `Err`方法返回context被取消的错误原因，一般是在`Done`方法返回的channel有数据的时候（表明context被取消）调用；
+- `Err`方法返回context被取消的错误原因，此方法一般是在`Done`方法返回的channel有数据的时候（表明context被取消）调用；
 - `Deadline`方法即设置context的截止时间，到了这个时间context会自动发起取消请求；当第二个返回值`ok`为`false`时表示没有设置截止时间，如果需要取消的话，需要调用取消函数进行取消；
 -  `Value`方法通过key获取context上绑定的值，这个方法是线程安全的，与`Err`方法一样，一般是在`Done`方法返回的channel有数据的时候（表明context被取消）调用；
 
@@ -73,7 +73,7 @@ func (*emptyCtx) Value(key interface{}) interface{} {
 }
 ```
 
-以上我们看到的`emptyCtx`结构体定义，发现`emptyCtx`是一个不能被取消，没有设置截止时间也没有没有携带任何值的context的实现。但我们一般并不直接使用它，而是通过`context`包中的两个工厂方法来来基于`emptyCtx`创建两种不同的context，开始上下文的时候都是以这两个作为最顶层的根context，然后再衍生出其他的子context，最终这些context被组织成一棵树状结构；这样，当一个context被取消时，所有继承自它的context都会被自动取消。这个两个context的定义如下：
+以上我们看到的`emptyCtx`结构体定义，发现`emptyCtx`是一个不能被取消，没有设置截止时间也没有没有携带任何值的context的实现。但我们一般并不直接使用它，而是通过`context`包中的两个工厂方法来来基于`emptyCtx`创建两种不同的context，需要开始上下文的时候都是以这两个作为最顶层的根context，然后再衍生出其他的子context，最终这些context被组织成一棵树状结构；这样，当一个context被取消时，所有继承自它的context都会被自动取消。这个两个context的定义如下：
 
 ```
 var (
@@ -117,12 +117,12 @@ func WithValue(parent Context, key, val interface{}) Context
 
 ### Context最佳实践
 
-- 根ontext一般为Background，通过`context.Background()`得到；
+- 根context一般为Background，通过`context.Background()`得到；
 - 不要把context对象放在结构体定义中，而是以参数的方式显示地在函数间传递；
 - 一般把context作为第一个参数传递给入口请求和出口请求链路上的每一个函数，变量名推荐使用`ctx`；
-- 不要传递值为`nil`的context给函数或者方法传递context的时候，否则在追踪的时候，就会断了树的连接；
-- context的`Value`方法应该传递必须的数据，不要什么数据都使用这个传递；context传递数据是线程安全的；
-- 可以把一个context对象传递给任意多个gorotuine，对它执行取消操作时，所有goroutine都会接收到取消信号
+- 不要传递值为`nil`的context给函数或者方法，否则在追踪的时候，就会断了context树的连接；
+- context的`Value`方法应该传递必须的数据，不要什么数据都使用`Value`方法传递；context传递数据是线程安全的；
+- 可以把一个context对象传递给任意多个gorotuine，对它执行取消操作时，所有goroutine都会接收到取消信号；
 
 ### Context典型使用实例
 
