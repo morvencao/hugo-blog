@@ -56,7 +56,7 @@ func main() {
 
 1）Gosched
 
-`runtime.Gosched()`的作用是让当前Go Routine主动CPU时间片，让Go语言调度器安排其他等待Go Routine的运行，并在下次某个时候从该位置恢复执行，非常类似于Java线程库的`Thread.yield`。
+`runtime.Gosched()`的作用是让当前Go Routine主动让出CPU时间片，让Go语言调度器安排其他等待的Go Routine的运行，并在下次某个时候从该位置恢复执行，非常类似于Java线程库的`Thread.yield`。
 
 举个例子：
 
@@ -95,7 +95,7 @@ a: 6
 
 2）Goexit
 
-`runtime.Goexit()`主要用于立即终止当前Go Routine的执⾏，Go语言调度器确保所有已注册`defer`语句调用被执行。
+`runtime.Goexit()`主要用于立即终止当前Go Routine的执⾏，Go语言调度器确保所有已注册的`defer`语句被调用执行。
 
 ```
 func main() {
@@ -164,7 +164,7 @@ func main() {
 
 有了Go Routine，我们可以并发地启动多个子任务，极大地提高处理的效率，但是当多个子任务之间有数据要同步怎么办？比如说我有两个子任务，子任务2必须等子任务1将处理了某个数据之后才能启动子任务2，怎么保证这样的数据共享与同步？这就是Go Channel的作用。
 
-Go Channel是并发的Go Routine之间进行通信的一种方式，它与Unix中的管道类似，底层是一种先入先出（FIFO）的队列。
+Go Channel是并发的Go Routine之间进行通信的一种方式，它与Unix中的管道机制类似，底层是一种先入先出（FIFO）的队列。
 
 ### Go Channel的类型与声明
 
@@ -223,7 +223,7 @@ i := <-c
 fmt.Println(i)
 ```
 
-Send操作被执行前通讯一直被阻塞着。如前所言，对于无缓存的Go Channel而言，只有在Receiver准备好后Send操作才被执行；如果有缓存，并且缓存未满，则send操作也会被执行。
+Send操作被执行前通讯一直被阻塞着。如前所言，对于无缓存的Go Channel而言，只有在Receiver准备好后Send操作才被执行；如果有缓存，并且缓存未满，则send操作会立刻被执行。
 
 > Note:
 > - 向一个已经被close的Go Channel中发送数据会导致`run-time panic`
@@ -231,7 +231,7 @@ Send操作被执行前通讯一直被阻塞着。如前所言，对于无缓存�
 
 **Receive**
 
-`<-ch`用来从Go Channel中接收数据，对于无缓存的Go Channel而言，只有在Sender准备好后receive操作才被执行；如果有缓存，并且缓存不为空，则receive操作也会被执行。
+`<-ch`用来从Go Channel中接收数据，对于无缓存的Go Channel而言，只有在Sender准备好后receive操作才被执行；如果有缓存，并且缓存不为空，则receive操作会立刻被执行。
 
 > Note:
 > - 从nil的Go Channel中接收数据会一直被block
@@ -261,7 +261,7 @@ func main() {
 
 **Select**
 
-`select`语句类似于`switch`语句，只是用来处理Go Channel直接的并发通信的。`select`对应的`case`子句可以是Send表达式，也可以是Receive表达式，亦或者`default`表达式，`select`子句可以选择一组可能的Send操作和Receive操作去处理；如果有多个`case`子句都可以运行，`select`会随机公平地选出一个执行；如果没有`case`子句满足处理条件，则会默认选择`default`去处理；如果没有`default`子句存在，则`select`语句会一直被阻塞，直到某个`case`需要被处理。
+`select`语句类似于`switch`语句，只是用来处理多个GO Routine通过Go Channel来实现并发通信的。`select`对应的`case`子句可以是Send表达式，也可以是Receive表达式，亦或者`default`表达式，`select`子句可以选择一组可能的Send操作和Receive操作去处理；如果有多个`case`子句都可以运行，`select`会随机公平地选出一个执行；如果没有`case`子句满足处理条件，则会默认选择`default`去处理；如果没有`default`子句存在，则`select`语句会一直被阻塞，直到某个`case`需要被处理。
 
 > Note： 最多允许有一个`default`子句，它可以放在`case`子句列表的任何位置，但一般会将它放在最后。`nil` channel上的`select`操作会一直被阻塞；如果没有`default`子句，只有`nil`的Go Channel上的`select`语句会一直被阻塞。
 
@@ -314,6 +314,7 @@ for {
 ```
 import "time"
 import "fmt"
+
 func main() {
     c := make(chan string, 1)
     go func() {
@@ -350,4 +351,4 @@ go func() {
 }()
 ```
 
-`timer`和`ticker`都可以通过`Stop()`方法来停止。一旦它停止，接收者不再会从Go Channel中接收数据了。
+`timer`和`ticker`都可以通过`Stop()`方法来停止。一旦它停止，接收者不再会从返回的Go Channel中接收到数据了。
