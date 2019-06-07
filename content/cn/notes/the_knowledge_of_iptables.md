@@ -140,4 +140,68 @@ raw -> mangle -> nat -> filter
 1. 不要把“链”的默认策略修改为拒绝，因为有可能配置失败或者清除所有策略后无法远程到服务器，而是尽量使用规则条目配置默认策略
 2. 为防止配置失误策略把自己也拒掉，可在配置策略时设置计划任务定时清除策略，当确定无误后，关闭该计划任务
 
+### iptables语法
+
+
+iptables语法结构如下所示：
+
+```
+iptables(选项)(参数)
+```
+
+**选项：**
+
+```
+# 通用匹配：源地址目标地址的匹配
+-p：指定要匹配的数据包协议类型；
+-s, --source [!] address[/mask] ：把指定的一个／一组地址作为源地址，按此规则进行过滤。当后面没有 mask 时，address 是一个地址，比如：192.168.1.1；当 mask 指定时，可以表示一组范围内的地址，比如：192.168.1.0/255.255.255.0。
+-d, --destination [!] address[/mask] ：地址格式同上，但这里是指定地址为目的地址，按此进行过滤。
+-i, --in-interface [!] <网络接口name> ：指定数据包的来自来自网络接口，比如最常见的 eth0 。注意：它只对 INPUT，FORWARD，PREROUTING 这三个链起作用。如果没有指定此选项， 说明可以来自任何一个网络接口。同前面类似，"!" 表示取反。
+-o, --out-interface [!] <网络接口name> ：指定数据包出去的网络接口。只对 OUTPUT，FORWARD，POSTROUTING 三个链起作用。
+
+# 查看管理命令
+-L, --list [chain] 列出链 chain 上面的所有规则，如果没有指定链，列出表上所有链的所有规则。
+
+# 规则管理命令
+-A, --append chain rule-specification 在指定链 chain 的末尾插入指定的规则，也就是说，这条规则会被放到最后，最后才会被执行。规则是由后面的匹配来指定。
+-I, --insert chain [rulenum] rule-specification 在链 chain 中的指定位置插入一条或多条规则。如果指定的规则号是1，则在链的头部插入。这也是默认的情况，如果没有指定规则号。
+-D, --delete chain rule-specification -D, --delete chain rulenum 在指定的链 chain 中删除一个或多个指定规则。
+-R num：Replays替换/修改第几条规则
+
+# 链管理命令（这都是立即生效的）
+-P, --policy chain target ：为指定的链 chain 设置策略 target。注意，只有内置的链才允许有策略，用户自定义的是不允许的。
+-F, --flush [chain] 清空指定链 chain 上面的所有规则。如果没有指定链，清空该表上所有链的所有规则。
+-N, --new-chain chain 用指定的名字创建一个新的链。
+-X, --delete-chain [chain] ：删除指定的链，这个链必须没有被其它任何规则引用，而且这条上必须没有任何规则。如果没有指定链名，则会删除该表中所有非内置的链。
+-E, --rename-chain old-chain new-chain ：用指定的新名字去重命名指定的链。这并不会对链内部照成任何影响。
+-Z, --zero [chain] ：把指定链，或者表中的所有链上的所有计数器清零。
+
+-j, --jump target <指定目标> ：即满足某条件时该执行什么样的动作。target 可以是内置的目标，比如 ACCEPT，也可以是用户自定义的链。
+-h：显示帮助信息；
+```
+
+**参数**
+
+| 参数 | 作用 |
+| ----- | ----- |
+| -P | 设置默认策略:iptables -P INPUT (DROP) |
+| -F | 清空规则链 |
+| -L | 查看规则链 |
+| -A | 在规则链的末尾加入新规则 |
+| -I | num 在规则链的头部加入新规则 |
+| -D | num 删除某一条规则 |
+| -s | 匹配来源地址IP/MASK，加叹号"!"表示除这个IP外 |
+| -d | 匹配目标地址 |
+| -i | 网卡名称 匹配从这块网卡流入的数据 |
+| -o | 网卡名称 匹配从这块网卡流出的数据 |
+| -p | 匹配协议,如tcp,udp,icmp |
+| --dport num | 匹配目标端口号 |
+| --sport num | 匹配来源端口号 |
+
+**命令选项输入顺序：**
+
+```
+iptables -t 表名 <-A/I/D/R> 规则链名 [规则号] <-i/o 网卡名> -p 协议名 <-s 源IP/源子网> --sport 源端口 <-d 目标IP/目标子网> --dport 目标端口 -j 动作
+```
+
 对于iptables命令的细节，请参考：https://wangchujiang.com/linux-command/c/iptables.html
