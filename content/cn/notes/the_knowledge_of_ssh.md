@@ -95,7 +95,7 @@ AuthorizedKeysFile .ssh/authorized_keys
 
 通过前面的介绍，我们知道SSH会自动加密和解密客户端和远程主机之间的网络通信数据，这个功能有时候非常有用，其他TCP网络应用程序可以通过SSH来建立一条加密通道来传输网录数据，这就是SSH端口转发的作用。事实上，譬如Telnet，SMTP，LDAP之类的TCP应用均能够从中获益。不只是网络数据的加密传输，如果你工作的环境中的防火墙限制了一些网络端口的使用，但是允许SSH的连接，那么也是能够通过将TCP端口转发来使用SSH进行通信。
 
-![](https://i.loli.net/2019/03/24/5c97970c975a7.jpg)
+<img src="https://i.loli.net/2019/03/24/5c97970c975a7.jpg" style="width:60%;"/>
 
 
 如上图所示，使用了端口转发之后，TCP端口A与B之间不是直接通信，而是转发到了SSH客户端及服务端来通信，从而自动实现了数据加密并同时绕过了防火墙的限制。
@@ -118,7 +118,7 @@ ssh -L <local port>:<remote host>:<remote port> <SSH hostname>
 $ ssh -L 7001:localhost:389 LdapServerHost
 ```
 
-![](https://i.loli.net/2019/03/24/5c97992b19abf.jpg)
+<img src="https://i.loli.net/2019/03/24/5c97992b19abf.jpg" style="width:60%;"/>
 
 > Note: 本例中我们选择了`7001`端口作为本地的监听端口，在选择端口号时要注意非管理员帐号是无权绑定`1-1023`端口的，所以最好选择一个`1024-65535`之间的未占用的端口。
 
@@ -156,7 +156,7 @@ ssh -R <local port>:<remote host>:<remote port> <SSH hostname>
 $ ssh -R 7001:localhost:389 LdapClientHost
 ```
 
-![](https://i.loli.net/2019/03/24/5c979dce7810d.jpg)
+<img src="https://i.loli.net/2019/03/24/5c979dce7810d.jpg" style="width:60%;"/>
 
 可以看到，和本地端口转发相比，这次只是SSH Server和SSH Client的位置对调了一下，但是数据流传输路径还是一模一样：LdapClientHost上的应用将数据发送到本机的`7001`端口上，而本机的SSH Server会将`7001`端口收到的数据加密并通过SSH隧道转发到LdapServertHost的SSH Client，SSH Client会解密收到的数据并将之转发到监听的LDAP `389`端口，最后再将从LDAP返回的数据原路返回以完成整个流程。
 
@@ -172,7 +172,7 @@ ssh -L <local port>:<remote host>:<remote port> <SSH hostname>
 $ ssh -g -L 7001:<D>:389 <C>
 ```
 
-![](https://i.loli.net/2019/03/24/5c97a29669643.jpg)
+<img src="https://i.loli.net/2019/03/24/5c97a29669643.jpg" style="width:60%;"/>
 
 这样，应用客户端HostA要访问HostD的LDAP服务，只需要访问HostB的`7001`端口即可。注意我们在命令中指定了`-g`参数以保证HostA能够使用HostB建立的本地端口转发。
 
@@ -192,7 +192,7 @@ ssh -D <local port> <SSH Server>
 $ ssh -D 8888 user@remote-host
 ```
 
-![](https://i.loli.net/2019/03/24/5c97a65adcb61.jpg)
+<img src="https://i.loli.net/2019/03/24/5c97a65adcb61.jpg" style="width:60%;"/>
 
 
 SSH还有一些别的参数，也值得了解一下。
