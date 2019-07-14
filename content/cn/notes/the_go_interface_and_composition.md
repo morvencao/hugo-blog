@@ -1,6 +1,6 @@
 ---
-title: "GO语言的接口与组合"
-date: 2018-05-12
+title: "5分钟系列 -「Go Interface & Composition」"
+date: 2018-02-26
 type: "notes"
 draft: false
 ---
