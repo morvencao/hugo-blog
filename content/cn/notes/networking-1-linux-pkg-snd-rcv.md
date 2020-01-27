@@ -18,8 +18,6 @@ draft: false
 
 ----------------------------------------
 
-## 
-
 ## 数据包的接收过程
 
 废话不多说，我们先开始第一篇笔记的内容。
@@ -88,6 +86,63 @@ draft: false
 - 调用完sk_data_ready之后，一个数据包处理完成，等待应用层程序来读取。
 
 > Note: 上面所述的所有执行过程都在软中断的上下文中执行。
+
+----------------------------------------
+
+## 数据包的发送过程
+
+从逻辑上看，Linux网络数据包的发送过程和接收过程正好相反，我们仍旧以一个UDP数据包通过物理网卡发送的过程为例来讲解：
+
+### 应用层
+
+应用层处理过程的起点是应用程序调用Linux网络接口创建socket（所谓socket基本就是ip+端口组成的基本结构体），下面这张图详细的展示了应用层如何构建socket并发送给下层UDP：
+
+![network-send-data-1.jpg](https://i.loli.net/2020/01/27/XFTDfq37OQm9ZAa.jpg)
+
+- socket(...): 调用该函数来创建一个socket结构体，并初始化相应的操作函。
+- sendto(sock, ...): 应用层程序调用该函数开始发送数据包，该函数数会调用后面的`inet_sendmsg`。
+- inet_sendmsg: 该函数主要是检查当前socket有没有绑定源端口，如果没有的话，调用`inet_autobind`分配一个，然后调用UDP层的函数。
+- inet_autobind: 该函数会调用socket上绑定的`get_port`函数获取一个可用的端口。
+
+### 传输层
+
+![network-send-data-2.jpg](https://i.loli.net/2020/01/27/Eojq5mIZty3zJK7.jpg)
+
+- udp_sendmsg: 该函数是UDP传输层模块发送数据包的入口。该函数中先调用`ip_route_output_flow`获取路由信息（主要包括源IP和网卡），然后调用`ip_make_skb`构造skb结构体，最后将网卡的信息和该skb关联。
+- ip_route_output_flow: 该函数主要处理路由信息，它会根据路由表和目的IP，找到这个数据包应该从哪个设备发送出去，如果该socket没有绑定源IP，该函数还会根据路由表找到一个最合适的源IP给它。 如果该socket已经绑定了源IP，但根据路由表，从这个源IP对应的网卡没法到达目的地址，则该包会被丢弃，于是数据发送失败将返回错误。该函数最后会将找到的设备和源IP塞进flowi4结构体并返回给`udp_sendmsg`。
+- ip_make_skb: 该函数的功能是构造skb包，构造好的skb包里面已经分配了IP包头(包括源IP信息)，同时该函数会调用`__ip_append_dat`，如果需要分片的话，会在`__ip_append_data`函数中进行分片，同时还会在该函数中检查socket的send buffer是否已经用光，如果被用光的话，返回ENOBUFS。
+- udp_send_skb(skb, fl4): 该函数主要是往skb里面填充UDP的包头，同时处理checksum，然后交给IP网络层层的相应函数。
+
+### IP网络层
+
+![network-send-data-3.jpg](https://i.loli.net/2020/01/28/dRVXQnmpxbZoqwG.jpg)
+
+- ip_send_skb: IP网络层模块发送数据包的入口，该函数主要是调用后面的一些列函数。
+- __ip_local_out_sk: 用来设置IP报文头的长度和checksum，然后调用下面netfilter的钩子链`NF_INET_LOCAL_OUT`。
+- NF_INET_LOCAL_OUT: netfilter的钩子函数，可以通过iptables来配置处理函数链；如果该数据包没被丢弃，则继续往下走。
+- dst_output_sk: 该函数根据skb里面的信息，调用相应的output函数`ip_output`。
+- ip_output: 将上一层`udp_sendmsg`得到的网卡信息写入skb，然后调用        `NF_INET_POST_ROUTING`的钩子链。
+- NF_INET_POST_ROUTING: 在这一步主要在配置了SNAT，从而导致该skb的路由信息发生变化。
+- ip_finish_output: 这里会判断经过了上一步后，路由信息是否发生变化，如果发生变化的话，需要重新调用`dst_output_sk`（重新调用这个函数时，可能就不会再走到`ip_output`，而是走到被netfilter指定的output函数里，这里有可能是`xfrm4_transport_output`），否则接着往下走。
+- ip_finish_output2: 根据目的IP到路由表里面找到下一跳(nexthop)的地址，然后调用`__ipv4_neigh_lookup_noref`去arp表里面找下一跳的neigh信息，没找到的话会调用`__neigh_create`构造一个空的neigh结构体。
+- dst_neigh_output: 该函数调用`neigh_resolve_output`获取neigh信息，并将neigh信息里面的mac地址填到skb中，然后调用`dev_queue_xmit`发送数据包。
+- neigh_resolve_output: 该函数里面会发送arp请求，得到下一跳的mac地址，然后将mac地址填到skb中并调用`dev_queue_xmit`。
+
+### 内核处理数据包
+
+![network-send-data-4.jpg](https://i.loli.net/2020/01/28/bmCiIl3EBXnsSfY.jpg)
+
+- dev_queue_xmit: 内核模块开始处理发送数据包的入口函数，该函数会先获取设备对应的qdisc，如果没有的话（如loopback或者IP tunnels），就直接调用`dev_hard_start_xmit`，否则数据包将经过`traffic control`模块进行处理。
+- traffic control：该模块主要对数据包进行过滤和排序，如果队列满了的话，数据包会被丢掉，详情请参考: http://tldp.org/HOWTO/Traffic-Control-HOWTO/intro.html
+- dev_hard_start_xmit: 该函数先拷贝一份skb给“packet taps”(tcpdump的数据就从来自于此），然后调用`ndo_start_xmit`函数。如果`dev_hard_start_xmit`返回错误的话，调用它的函数会把skb放到一个地方，然后抛出软中断`NET_TX_SOFTIRQ`，然后交给软中断处理程序`net_tx_action`稍后重试。
+- ndo_start_xmit：该函数绑定到具体驱动发送数据的处理函数。
+
+> Note: `ndo_start_xmit`会指向具体网卡驱动的发送数据包的函数，这一步之后，数据包发送任务就交给网络设备驱动了，不同的网络设备驱动有不同的处理方式，但是大致流程基本一致：
+
+1. 将skb放入网卡自己的发送队列
+2. 通知网卡发送数据包
+3. 网卡发送完成后发送中断给CPU
+4. 收到中断后进行skb的清理工作
 
 ## 总结
 
