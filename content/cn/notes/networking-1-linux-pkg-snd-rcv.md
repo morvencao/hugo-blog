@@ -147,3 +147,8 @@ draft: false
 ## 总结
 
 理解了Linux网络数据包的接收和发送流程，我们就可以知道在哪些地方监控和修改数据包，哪些情况下数据包可能被丢弃，特别是了解了netfilter中相应钩子函数的位置，对于了解iptables的用法有一定的帮助，同时也会帮助我们更好的理解Linux下的网络虚拟设备。
+
+## 参考
+
+https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/
+https://blog.packagecloud.io/eng/2016/10/11/monitoring-tuning-linux-networking-stack-receiving-data-illustrated/
