@@ -43,7 +43,7 @@ TUN/TAP虚拟网络设备一端连着协议栈，另外一端不是物理网络�
 
 ### veth
 
-veth虚拟网络设备一端连着协议栈，另外一端不是物理网络，而是另一个veth设备，成对的veth设备中一个数据包发送出去后会直接到另一个veth设备上去。
+veth虚拟网络设备一端连着协议栈，另外一端不是物理网络，而是另一个veth设备，成对的veth设备中一个数据包发送出去后会直接到另一个veth设备上去。每个veth设备都可以被配置IP地址，并参与三层IP网络路由过程。
 
 下面就是一个典型的veth设备对的例子：
 
@@ -109,7 +109,9 @@ listening on lo, link-type EN10MB (Ethernet), capture size 458122 bytes
 
 ### bridge
 
-bridge一般叫网桥，它也是一种虚拟网络设备，所以具有虚拟网络设备的特征，可以配置IP、MAC地址等；与其他去你网络设备不同的是，bridge是一个虚拟交换机，和物理交换机有类似的功能。bridge一端连接着协议栈，另外一端有多个端口，数据在各个端口间转发是基于MAC地址。
+[bridge](https://wiki.linuxfoundation.org/networking/bridge)一般叫网桥，它也是一种虚拟网络设备，所以具有虚拟网络设备的特征，可以配置IP、MAC地址等。与其他去你网络设备不同的是，bridge是一个虚拟交换机，和物理交换机有类似的功能。bridge一端连接着协议栈，另外一端有多个端口，数据在各个端口间转发是基于MAC地址。
+
+bridge可以工作在二层(链路层)，也可以工作在三层（IP网路层）。默认工作在二层。默认情况下，其工作在二层，可以在同一子网内的的不同主机间转发以太网报文；当给bridge分配了IP地址，也就开启了该bridge的三层工作模式。在Linux下，你可以用[iproute2](https://wiki.linuxfoundation.org/networking/iproute2)或`brctl`命令对bridge进行管理。
 
 创建bridge与创建其他虚拟网络设备类似，只需要制定type为`bridge`:
 
