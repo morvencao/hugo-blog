@@ -1,5 +1,5 @@
 ---
-title: "主流容器网络总结与实践"
+title: "容器网络(一)"
 date: 2020-01-30
 type: "notes"
 draft: false
@@ -10,20 +10,44 @@ draft: false
 1. 容器IP地址的管理
 2. 容器之间的相互通信
 
-其中，容器IP地址的管理包括容器IP地址的分配与回收，而容器之间的相互通信包括同一主机容器之间和跨主机容器之间通信两种场景。这两个问题也不能完全分开来看，因为不同的解决方案往往要同时考虑以上两点，我们在这篇笔记中将重点关注第二个问题。另外容器网络的发展已经相对成熟，也有很多相关的理论介绍文章，所以这篇笔记会尝试从实践的角度主流的容器网络实现原理。
+其中，容器IP地址的管理包括容器IP地址的分配与回收，而容器之间的相互通信包括同一主机容器之间和跨主机容器之间通信两种场景。这两个问题也不能完全分开来看，因为不同的解决方案往往要同时考虑以上两点。容器网络的发展已经相对成熟，这篇笔记先对主流容器网络模型做一些概述，然后将进一步对典型的容器网络模型展开实践。
 
-关于容器网络，Docker与Kubernetes采用了不同的网络模型：
+## CNM vs CNI
+
+关于容器网络，Docker与Kubernetes分别提出了不同的规范标准：
 
 - Docker采用的[CNM](https://github.com/docker/libnetwork/blob/master/docs/design.md)(Container Network Model)
 - Kunernetes支持的[CNI](https://github.com/containernetworking/cni)模型(Container Network Interface)
 
-Docker通过[libnetwork](https://github.com/docker/libnetwork)实现了CNM，是Docker自带的网络模型，可以通过`docker`命令直接管理。而CNI并不是Docker原生的，它是为容器技术设计的通用型网络接口，因此CNI接口可以很容易地从高层向底层调用，但从底层到高层却不是很方便，所以一些常见的CNI插件很难在Docker层面激活。这两个模型全都支持插件化，也就是说我们每个人都可以按照这两套网络规范来编写自己的具体网络实现。
+CNM基于[libnetwork](https://github.com/docker/libnetwork)，是Docker内置的模型规范，它的总体架构如下图所示：
+
+![cnm-model.jpg](https://i.loli.net/2020/01/31/lWUKNw5Tbp3cArC.jpg)
+
+可以看到，CNM规范主要定义了以下三个组件：
+
+- Sandbox: 每个Sandbox包一个容器网络栈(network stack)的配置：容器的网口、路由表和DNS设置等，Sanbox可以通过Linux网络命名空间netns来实现
+- Endpoint: 每个Sandbox通过Endpoint加入到一个Network里，Endpoint可以通过Linux虚拟网络设备veth对来实现
+- Network: 一组能相互直接通信的Endpoint，Network可以通过Linux网桥设备bridge，VLAN等实现
+
+可以看到，底层实现原理还是我们之前介绍过的Linux虚拟网络设备，网络命名空间等。但是，为什么Kubernetes没有采用CNM规范标准；而是选择CNI，感兴趣的话可以去看看Kubernetes的文章[Why Kubernetes doesn’t use libnetwork](https://kubernetes.io/blog/2016/01/why-kubernetes-doesnt-use-libnetwork/)，总的来说，不使用CNM最关键的一点是，是因为Kubernetes考虑到CNM在一定程度上和container runtime耦合度太高，因此以Kubernetes为领导的其他一些组织开始制定新的CNI规范。CNI并不是Docker原生支持的，它是为容器技术设计的通用型网络接口，因此CNI接口可以很容易地从高层向底层调用，但从底层到高层却不是很方便，所以一些常见的CNI插件很难在Docker层面激活。但是这两个模型全都支持插件化，也就是说我们每个人都可以按照这两套网络规范来编写自己的具体网络实现。
 
 我们省去这两套规范的具体介绍，直接从要解决的网络问题出发，来看看主流的容器网络实现原理。
 
+## 技术术语
+
+在开始之前，我们总结一些在容器网络的介绍文章里面看到各种技术术语：
+
+- IPAM: IP Address Management，即IP地址管理。IPAM并不是容器时代特有的词汇，传统的标准网络协议比如DHCP其实也是一种IPAM，负责从MAC地址分发IP地址；但是到了容器时代我们提到IPAM，我们特指为每一个容器实例分配和回收IP地址，保证一个集群里面的所有容器都分配全局唯一的IP地址；主流的做法包括：基于CIDR的IP地址段分配地或精确为每一个容器分配IP。
+- Overlay：在容器时代，就是在主机现有二层（数据链路层）或三层（IP网络层）基础之上再构建起来一个独立的网络，这个overlay网络通常会有自己独立的IP地址空间、交换或者路由的实现。
+- IPIP: 一种基于Linux网络设备TUN实现的隧道协议，允许将三层（IP）网络包封装在另外一个三层网络包之发送和接收，详情请看之前IPIP隧道的[介绍笔记](https://morven.life/notes/networking-3-ipip/)。
+- IPSec: 跟IPIP隧道协议类似，是一个点对点的一个加密通信协议，一般会用到Overlay网络的数据隧道里。
+- VXLAN：最主要是解决VLAN支持虚拟网络数量（4096）过少的问题而由VMware、Cisco、RedHat等联合提出的解决方案。VXLAN可以支持在一个VPC(Virtual Private Cloud)划分多达1600万个虚拟网络。
+- BGP: 主干网自治网络的路由协议，当代的互联网由很多小的AS自治网络(Autonomous system)构成，自治网络之间的三层路由是由BGP实现的，简单来说，通过BGP协议AS告诉其他AS自己子网里都包括哪些IP地址段，自己的AS编号以及一些其他的信息。
+- SDN: Software-Defined Networking，一种广义的概念，通过软件方式快速配置网络，往往包括一个中央控制层来集中配置底层基础网络设施。
+
 ## host网络
 
-不管是对外暴露容器内的服务还是容器之间的跨主机通信，我们能想到的最直观的解决方案就是直接使用宿主机host网络，这时，容器完全复用复用宿主机的网络设备以及协议栈，容器的IP就是主机的IP，这样，只要宿主机主机能通信，容器也就自然能通信。但是，这样做的问题也很大，最直接问题就是端口管理混乱，端口冲突。
+不管是对外暴露容器内的服务还是容器之间的跨主机通信，我们能想到的最直观的解决方案就是直接使用宿主机host网络，这时，容器完全复用复用宿主机的网络设备以及协议栈，容器的IP就是主机的IP，这样，只要宿主机主机能通信，容器也就自然能通信。但是这样，为了暴露容器服务，每个容器需要占用宿主机上的一个端口，通过这个端口和外界通信。所以，就需要手动维护端口的分配，不要使不同的容器服务运行在一个端口上，正因为如此，这种容器网络模型很难被推广到生产环境。
 
 docker原生支持的网络模式可以通过`docker network ls`来看：
 
@@ -287,12 +311,3 @@ rtt min/avg/max/mdev = 0.078/0.168/0.259/0.091 ms
    - 修改主机路由：把容器网络加到主机路由表中，把主机网络设备当作容器网关，通过路由规则转发到指定的主机，实现容器的三层互通。目前通过路由技术实现容器跨主机通信的网络如Flannel host-gw、Calico等。
 
 本小节我们就先来看看这些主流解决方案的核心思想，下一篇笔记kubernetes的网络模型我们将会仔细介绍这些主流解决方案的实现原理。
-
-## 参考
-
-- https://zhuanlan.zhihu.com/p/81010026
-
-
-
-
-
