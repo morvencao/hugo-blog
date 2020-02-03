@@ -29,11 +29,11 @@ CNM基于[libnetwork](https://github.com/docker/libnetwork)，是Docker内置的
 - Endpoint: 每个Sandbox通过Endpoint加入到一个Network里，Endpoint可以通过Linux虚拟网络设备veth对来实现
 - Network: 一组能相互直接通信的Endpoint，Network可以通过Linux网桥设备bridge，VLAN等实现
 
-可以看到，底层实现原理还是我们之前介绍过的Linux虚拟网络设备，网络命名空间等。但是，为什么Kubernetes没有采用CNM规范标准；而是选择CNI，感兴趣的话可以去看看Kubernetes的文章[Why Kubernetes doesn’t use libnetwork](https://kubernetes.io/blog/2016/01/why-kubernetes-doesnt-use-libnetwork/)，总的来说，不使用CNM最关键的一点是，是因为Kubernetes考虑到CNM在一定程度上和container runtime耦合度太高，因此以Kubernetes为领导的其他一些组织开始制定新的CNI规范。CNI并不是Docker原生支持的，它是为容器技术设计的通用型网络接口，因此CNI接口可以很容易地从高层向底层调用，但从底层到高层却不是很方便，所以一些常见的CNI插件很难在Docker层面激活。但是这两个模型全都支持插件化，也就是说我们每个人都可以按照这两套网络规范来编写自己的具体网络实现。
+可以看到，底层实现原理还是我们之前介绍过的Linux虚拟网络设备，网络命名空间等。CNM规范的典型场景是这样的：用户可以创建一个或多个Network，一个容器Sandbox可以通过Endpoint加入到一个或多个Network，同一个Network中容器Sanbox可以通信，不同Network中的容器Sandbox隔离。这样就可以实现从容器与网络的解耦，也就是锁，在创建容器之前，可以先创建网络，然后决定让容器加入哪个网络。
 
-我们省去这两套规范的具体介绍，直接从要解决的网络问题出发，先来看看单一主机上容器网络互通的实现原理。
+但是，为什么Kubernetes没有采用CNM规范标准，而是选择CNI，感兴趣的话可以去看看Kubernetes的官方博客文章[Why Kubernetes doesn’t use libnetwork](https://kubernetes.io/blog/2016/01/why-kubernetes-doesnt-use-libnetwork/)，总的来说，不使用CNM最关键的一点是，是因为Kubernetes考虑到CNM在一定程度上和container runtime耦合度太高，因此以Kubernetes为领导的其他一些组织开始制定新的CNI规范。CNI并不是Docker原生支持的，它是为容器技术设计的通用型网络接口，因此CNI接口可以很容易地从高层向底层调用，但从底层到高层却不是很方便，所以一些常见的CNI插件很难在Docker层面激活。但是这两个模型全都支持插件化，也就是说我们每个人都可以按照这两套网络规范来编写自己的具体网络实现。
 
-docker原生支持的网络模式可以通过`docker network ls`来看：
+docker通过libnetwork原生支持的网络模式可以通过`docker network ls`来看：
 
 ```
 # docker network ls
@@ -44,6 +44,8 @@ f559b082c95f        bridge              bridge              local
 ```
 
 可以看到三种网络模型，在创建容器的时候可以通过`--network`来指定要使用的模型。其中bridge是默认的网络模型，我们接下来将会介绍并模拟实现bridge模型；nono不创建任何网络，host网络模型即使用主机网络，它不会创建新的netns网络命名空间。
+
+> Note: 如果[enable了docker swarm](https://docs.docker.com/network/overlay/)，那么你还会看到`overlay`网络模型，后面我们会详细介绍docker原生overlay网络模型的实现原理。
 
 ## bridge网络
 
