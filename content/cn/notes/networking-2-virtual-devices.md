@@ -203,4 +203,5 @@ rtt min/avg/max/mdev = 0.121/0.121/0.121/0.000 ms
 - https://backreference.org/2010/03/26/tuntap-interface-tutorial/
 - https://blog.scottlowe.org/2013/09/04/introducing-linux-network-namespaces/
 - https://www.ibm.com/developerworks/cn/linux/1310_xiawc_networkdevice/
+- http://ifeanyi.co/posts/linux-namespaces-part-1/
 - http://www.opencloudblog.com/?p=66
