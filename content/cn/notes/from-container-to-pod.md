@@ -1,5 +1,5 @@
 ---
-title: "从docker容器到pod"
+title: "从container到pod"
 date: 2020-02-03
 type: "notes"
 draft: false
@@ -9,9 +9,9 @@ draft: false
 
 > docker技术比虚拟机技术更为轻便、快捷，docker容器本质上是进程
 
-甚至我们或多或少接受了docker技术基于linux内核中两个非常重要的特性，namespace和cgroup。那么，namespace和cgroup到底是怎么来隔离docker容器进程的呢？今天我们就来一探究竟。
+甚至我们或多或少都在潜移默化中接受了container实现是基于linux内核中namespace和cgroup这两个非常重要的特性。那么，namespace和cgroup到底是怎么来隔离docker容器进程的呢？今天我们就来一探究竟。
 
-## docker容器
+## container
 
 在了解docker容器进程怎么隔离之前，我们先来看看linux内核中的namespace和cgroup到底是什么。
 
