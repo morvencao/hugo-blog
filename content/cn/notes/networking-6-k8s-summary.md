@@ -1,6 +1,6 @@
 ---
 title: "浅聊Kubernetes网络模型"
-date: 2020-02-04
+date: 2020-04-10
 type: "notes"
 draft: false
 ---
