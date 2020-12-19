@@ -114,7 +114,7 @@ Istio的出现将服务网格的概念发扬光大，它创新性地将服务网
 
 在整个网络里面，所有的流量都在sidecar代理的控制当中，所有的sidecar代理都在控制面板控制当中，因此，可以通过控制面板控制整个服务网格，这是Istio带来的最大的革新。
 
-<img src="https://istio.io/docs/concepts/what-is-istio/arch.svg" style="width:60%;"/>
+<img src="https://i.loli.net/2020/12/19/AI3K6W8DdT4hOZ2.png" style="width:60%;"/>
 
 就如我们在上面这幅图上看到的那样，Istio默认使用envoy作为sidecar代理（事实上，Istio利用了envoy内建的大量特性，例如服务发现与负载均衡、流量拆分、故障注入、熔断器以及金丝雀发布等功能），而在控制平面Istio也分为四个主要模块：
 
