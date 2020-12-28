@@ -43,9 +43,9 @@ f559b082c95f        bridge              bridge              local
 97aedfe8792d        none                null                local
 ```
 
-可以看到三种网络模型，在创建容器的时候可以通过`--network`来指定要使用的模型。其中bridge是默认的网络模型，我们接下来将会介绍并模拟实现bridge模型；nono不创建任何网络，host网络模型即使用主机网络，它不会创建新的netns网络命名空间。
+可以看到三种网络模型，在创建容器的时候可以通过`--network`来指定要使用的模型。其中bridge是默认的网络模型，我们接下来将会介绍并模拟实现bridge模型；none网络模型不创建任何网络，host网络模型即使用主机网络，它不会创建新的netns网络命名空间。
 
-> Note: 如果[enable了docker swarm](https://docs.docker.com/network/overlay/)，那么你还会看到`overlay`网络模型，后面我们会详细介绍docker原生overlay网络模型的实现原理。
+> Note: 如果打开了[docker swarm](https://docs.docker.com/network/overlay/)，那么你还会看到`overlay`网络模型，后面我们会详细介绍docker原生overlay网络模型的实现原理。
 
 ## bridge网络
 
@@ -53,7 +53,7 @@ bridge桥接网络是docker默认的网络模型，如果我们在创建容器�
 
 ![network-docker-bridge-1.jpg](https://i.loli.net/2020/01/30/RjzDdbcK7uJ546Q.jpg)
 
-可以看到，bridge网络模型主要依赖于大名鼎鼎的docker0网桥以及veth虚拟网络设备对实现，通过之前笔记对于linux虚拟网络设备的了解，我们知道veth设备对对于从一个设备发出的数据包，会直接出现在另一个网络设备上，即使不在一个netns网络命名空间中，所以将veth设备对实际上是连接不同netns网络命名空间的”网线”，docker0网桥设备充当不同容器网络的网关。事实上，我们一旦而当以bridge网络模式创建容器时，会自动创建相应的veth设备对，其中一端连接到docker0网桥，另外一端连接到容器网络的eth0虚拟网卡。
+可以看到，bridge网络模型主要依赖于大名鼎鼎的docker0网桥以及veth虚拟网络设备对实现，通过之前笔记对于linux虚拟网络设备的了解，我们知道veth设备对对于从一个veth设备发出的数据包，会直接发送到另一端的veth设备上，即使不在一个netns网络命名空间中，所以将veth设备对实际上是连接不同netns网络命名空间的”网线”，docker0网桥设备充当不同容器网络的网关。事实上，我们一旦而当以bridge网络模式创建容器时，会自动创建相应的veth设备对，其中一端连接到docker0网桥，另外一端连接到容器网络的eth0虚拟网卡。
 
 首先我们在安装了docker的宿主机上查看网桥设备docker0和路由规则：
 
@@ -69,7 +69,7 @@ bridge桥接网络是docker默认的网络模型，如果我们在创建容器�
 然后使用默认的bridge网络模式创建一个容器，并查看宿主机端的veth设备对：
 
 ```
-# docker run -d --name mynginx  nginx:latest
+# docker run -d --name mynginx nginx:latest
 # ip link show type veth
 11: veth42772d8@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP mode DEFAULT group default
     link/ether e2:a3:89:76:14:f3 brd ff:ff:ff:ff:ff:ff link-netnsid 0
@@ -85,7 +85,7 @@ bridge桥接网络是docker默认的网络模型，如果我们在创建容器�
 # nsenter --net=/var/run/docker/netns/62fd67d9ef3e ip link show type veth
 10: eth0@if11: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default
     link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-# nsenter --net=/var/run/docker/netns/62fd67d9ef3e ip addr show  type veth
+# nsenter --net=/var/run/docker/netns/62fd67d9ef3e ip addr show type veth
 10: eth0@if11: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
     link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
     inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
@@ -248,6 +248,6 @@ rtt min/avg/max/mdev = 0.078/0.168/0.259/0.091 ms
 
 实际上，此时两个netns网络命名空间处于同一个子网中，所以网桥设备`mybr0`还是在二层（数据链路层）起到的作用，只需要对方的MAC地址就可以访问。
 
-但是如果需要从两个netns网络命名空间访问其他网段的地址，这个时候就需要设置默认网桥设备`mybr0`充当的默认网关地址就发挥作用了：来自于两个netns网络命名空间的数据包发现目标IP地址并不是本子网地址，于是发给网关`mybr0`，此时网桥设备`mybr0`其实工作在三层（IP网络层），它收到数据包之后，查看本地路由与目标IP地址，寻找下一跳的地址。
+但是如果需要从两个netns网络命名空间访问其他网段的地址，这个时候网桥设备`mybr0`设置为默认网关地址就发挥作用了：来自于两个netns网络命名空间的数据包发现目标IP地址并不是本子网地址，于是发给网关`mybr0`，此时网桥设备`mybr0`其实工作在三层（IP网络层），它收到数据包之后，查看本地路由与目标IP地址，寻找下一跳的地址。
 
 当然，如果需要从两个netns网络命名空间访问其他公网地址.eg. `google.com`，需要这是iptables来做源地址转换，这里就不细细展开来说。
