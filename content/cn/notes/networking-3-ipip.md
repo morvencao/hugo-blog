@@ -5,7 +5,7 @@ type: "notes"
 draft: false
 ---
 
-上一篇笔记中，我们在介绍网络设备的时候了解了一种典型的通过TUN/TAP设备来实现VPN的原理，但是并没有实践TUN/TAP虚拟网络设备具体在linux中怎么发挥实际的功能。这篇笔记我们就来看看在云计算领域中一种非常典型的IPIP隧道如何TUN设备来实现。
+上一篇笔记中，我们在介绍网络设备的时候了解了一种典型的通过TUN/TAP设备来实现VPN的原理，但是并没有实践TUN/TAP虚拟网络设备具体在linux中怎么发挥实际功能的。这篇笔记我们就来看看在云计算领域中一种非常典型的IPIP隧道如何基于TUN设备来实现。
 
 ## IPIP隧道
 
@@ -20,7 +20,7 @@ IP Body:
   HTTP: stuff
 ```
 
-这就是典型的IPIP隧道数据包的结构。Linux原生支持好几种不同的IPIP隧道类型，但都依赖于TUN网络设备，我们可以通过命令`ip tunnel help`来查看IPIP隧道的相关类型以及操作：
+这就是典型的IPIP数据包的结构。Linux原生支持好几种不同的IPIP隧道类型，但都依赖于TUN网络设备，我们可以通过命令`ip tunnel help`来查看IPIP隧道的相关类型以及操作：
 
 ```
 # ip tunnel help
@@ -47,9 +47,10 @@ Where: NAME := STRING
 5. vti: 即虚拟隧道接口（Virtual Tunnel Interface），是一种IPsec隧道技术
 
 还有一些有用的参数：
-- ttl N 设置进入隧道数据包的TTL为N（N是一个1—255之间的数字，0是一个特殊的值，表示这个数据包的TTL值是继承(inherit)的），ttl参数的缺省值是为inherit
-- tos T/dsfield T 设置进入通道数据包的TOS域，缺省是inherit
-- [no]pmtudisc 在这个隧道上禁止或者打开路径最大传输单元发现(Path MTU Discovery)，默认打开的
+
+* ttl N 设置进入隧道数据包的TTL为N（N是一个1—255之间的数字，0是一个特殊的值，表示这个数据包的TTL值是继承(inherit)的），ttl参数的缺省值是为inherit
+* tos T/dsfield T 设置进入通道数据包的TOS域，缺省是inherit
+* [no]pmtudisc 在这个隧道上禁止或者打开路径最大传输单元发现(Path MTU Discovery)，默认打开的
 
 > Note: nopmtudisc选项和固定的ttl是不兼容的，如果使用了固定的ttl参数，系统会打开路径最大传输单元发现( Path MTU Discovery)功能
 
@@ -57,7 +58,7 @@ Where: NAME := STRING
 
 我们首先以最基本的one-to-one的IPIP隧道模式为例来介绍如何在linux中搭建IPIP隧道来实现两个不同子网之间的通信。
 
-开始之前需要注意的是，并不是所有的linux发行版都会默认加载`ipip.ko`模块，可以通过`lsmod | grep ipip`查看内核是否加载该模块；若没有则用`modprobe ipip`先加载；如果一切正常则应该显示：
+开始之前需要注意的是，并不是所有的linux发行版都会默认加载`ipip.ko`模块，可以通过`lsmod | grep ipip`查看内核是否加载该模块；若没有则用`modprobe ipip`命令先加载ipip模块；如果一切正常通过执行`lsmod | grep ipip`命令应该显示类似于下面的输出：
 
 ```
 # lsmod | grep ipip
@@ -81,16 +82,15 @@ A: 10.42.1.0/24
 B: 10.42.2.0/24
 ```
 
-为了简化，我们先在A节点上创建bridge网络设备`mybr0`，并且设置IP地址为`10.42.1.0/24`子网的网关地址，然后启用`mybr0`：
+为了简化，我们先在A节点上创建bridge网络设备`mybr0`，并且设置IP地址为`10.42.1.0/24`子网的网关地址，也就是`10.42.1.1/24`，然后启用`mybr0`网桥设备：
+
 ```
 # ip link add name mybr0 type bridge
 # ip addr add 10.42.1.1/24 dev mybr0
 # ip link set dev mybr0 up
 ```
 
-类似地，然后在B节点上分别执行类似的操作：
-
-B:
+类似地，然后在B节点上分别执行类似的操作，但是子网地址为`10.42.2.0/24`：
 
 ```
 # ip link add name mybr0 type bridge
@@ -258,8 +258,8 @@ C:
 2. 设置TUN网络设备的IP地址
 3. 设置到不同子网的路由，指明下一跳的地址
 
-
 对应的网关地址分别为我们即将创建的TUN网络设备
+
 4. 启用TUN网络设备来创建IPIP隧道
 
 > Note: TUN网络设备的IP地址是对应节点的子网地址，但是子网掩码是32位的，例如A节点上子网地址是`10.42.1.0/24`，A节点上的TUN网络设备的IP地址是`10.42.1.0/32`。这样做的原因是有时候同一个子网(例如`10.42.1.0/24`)的地址会分配相同的MAC地址，因此不能通过二层的链路层直接通信，而如果保证TUN网络设备的IP地址和任何地址都不在同一个子网，也就不存在二层的链路层直接通信了。关于这点请参考calico的实现原理，每个容器会有相同的MAC地址，后面我们有机会在深入探究。
@@ -351,7 +351,7 @@ listening on tunl0, link-type RAW (Raw IP), capture size 262144 bytes
 22:36:19.265997 IP 10.42.3.1 > 10.42.1.0: ICMP echo reply, id 5894, seq 2, length 64
 ```
 
-其实，从创建one-to-many的IPIP隧道的过程中我们就能大致猜到Linux的ipip模块基于路由信息获取IPIP包的内部ip然后再用外部IP封装成新的IP包。至于怎么解封IPIP数据包的呢，我们来看看ipip模块收数据包的过程：
+其实，从创建one-to-many的IPIP隧道的过程中我们就能大致猜到Linux的ipip模块基于路由信息获取IPIP包的内部IP然后再用外部IP封装成新的IP包。至于怎么解封IPIP数据包的呢，我们来看看ipip模块收数据包的过程：
 
 ```
 void ip_protocol_deliver_rcu(struct net *net, struct sk_buff *skb, int protocol)

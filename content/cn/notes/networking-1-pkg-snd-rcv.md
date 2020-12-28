@@ -26,7 +26,7 @@ draft: false
 
 ### 从网卡到内存
 
-我们知道，每个网络设备（网卡）需要有驱动才能工作，驱动需要在内核启动时加载到内核中才能工作。事实上，从逻辑上看，驱动是负责衔接网络设备和内核网络栈的中间模块，每当网络设备接收到新的数据包时，就会触发中断，而对应的中断处理程序正是加载到内核中的驱动程序。
+我们知道，每个网络设备（网卡）需要有驱动才能工作，驱动需要在内核启动时加载到内核中。事实上，从逻辑上看，驱动是负责衔接网络设备和内核网络栈的中间模块，每当网络设备接收到新的数据包时，就会触发中断，而对应的中断处理程序正是加载到内核中的驱动程序。
 
 下面这张图详细的展示了数据包如何从网络设备进入内存，并被处于内核中的驱动程序和网络栈处理的：
 
@@ -36,13 +36,13 @@ draft: false
 1. 数据包进入物理网卡。如果目的地址不是该网络设备，且该来网络设备没有开启[混杂模式](https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding)，该包会被网络设备丢弃。
 2. 物理网卡将数据包通过DMA的方式写入到指定的内存地址，该地址由网卡驱动分配并初始化。
 3. 物理网卡通过硬件中断（IRQ）通知CPU，有新的数据包到达物理网卡需要处理。
-4. CPU根据中断表，调用已经注册的中断函数，这个中断函数会调到驱动程序（NIC Driver）中相应的函数
+4. CPU根据中断表，调用已经注册了的中断函数，这个中断函数会调到驱动程序（NIC Driver）中相应的函数。
 5. 驱动先禁用网卡的中断，表示驱动程序已经知道内存中有数据了，告诉物理网卡下次再收到数据包直接写内存就可以了，不要再通知CPU了，这样可以提高效率，避免CPU不停的被中断。
 6. 启动软中断继续处理数据包。这样的原因是硬中断处理程序执行的过程中不能被中断，所以如果它执行时间过长，会导致CPU没法响应其它硬件的中断，于是内核引入软中断，这样可以将硬中断处理函数中耗时的部分移到软中断处理函数里面来慢慢处理。
 
 ### 内核处理数据包
 
-上一步中网络设备驱动程序会通过软触发内核网络模块中的软中断处理函数，内核处理数据包的流程如下图所示：
+上一步中网络设备驱动程序会通过触发内核网络模块中的软中断处理函数，内核处理数据包的流程如下图所示：
 
 ![network-receive-data-2.jpg](https://i.loli.net/2020/01/27/y2SZleoIwtbxDLs.jpg)
 
@@ -52,7 +52,9 @@ draft: false
 10. 驱动程序将内存中的数据包转换成内核网络模块能识别的`skb`(socket buffer)格式，然后调用`napi_gro_receive`函数
 11. `napi_gro_receive`会处理[GRO](https://lwn.net/Articles/358910/)相关的内容，也就是将可以合并的数据包进行合并，这样就只需要调用一次协议栈。然后判断是否开启了RPS，如果开启了，将会调用`enqueue_to_backlog`。
 12. `enqueue_to_backlog`函数会将数据包放入`input_pkt_queue`结构体中，然后返回。
+
 > Note: 如果`input_pkt_queue`满了的话，该数据包将会被丢弃，这个queue的大小可以通过`net.core.netdev_max_backlog`来配置
+
 13. 接下来CPU会在软中断上下文中处理自己`input_pkt_queue`里的网络数据（调用`__netif_receive_skb_core`函数）
 14. 如果没开启[RPS](https://github.com/torvalds/linux/blob/v3.13/Documentation/networking/scaling.txt#L99-L222)，`napi_gro_receive`会直接调用`__netif_receive_skb_core`函数。
 15. 紧接着CPU会根据是不是有`AF_PACKET`类型的socket（原始套接字），如果有的话，拷贝一份数据给它(`tcpdump`抓包就是抓的这里的包)。
@@ -61,15 +63,17 @@ draft: false
 
 ### 内核协议栈
 
-内核网络协议栈此时接收到的数据包其实是三层(IP网络层)数据包，因此，数据包首先会进入到IP网络层层，然后进入传输层处理。
+内核网络协议栈此时接收到的数据包其实是三层(IP网络层)数据包，因此，数据包首先会首先进入到IP网络层，然后进入传输层处理。
 
 #### IP网络层
 
 ![network-receive-data-3.jpg](https://i.loli.net/2020/01/27/oxfqD6Upiw7Blbt.jpg)
 
-- ip_rcv: `ip_rcv`函数是IP网络层处理模块的入口函数，该函数首先判断属否需要丢弃该数据包（目的mac地址不是当前网卡，并且网卡设置了混杂模式），如果需要进一步处理就然后调用注册在netfilter中的`NF_INET_PRE_ROUTING`这条链上的处理函数。
+- ip_rcv: `ip_rcv`函数是IP网络层处理模块的入口函数，该函数首先判断属否需要丢弃该数据包（目的mac地址不是当前网卡，并且网卡设置了混杂模式），如果需要进一步处理就调用注册在netfilter中的`NF_INET_PRE_ROUTING`这条链上的处理函数。
 - NF_INET_PRE_ROUTING: netfilter放在协议栈中的钩子函数，可以通过iptables来注入一些数据包处理函数，用来修改或者丢弃数据包，如果数据包没被丢弃，将继续往下走。
+
 > `NF_INET_PRE_ROUTING`等netfilter链上的处理逻辑可以通iptables来设置，详情请移步: https://morven.life/notes/the_knowledge_of_iptables/
+
 - routing: 进行路由处理，如果是目的IP不是本地IP，且没有开启`ip forward`功能，那么数据包将被丢弃，如果开启了`ip forward`功能，那将进入`ip_forward`函数。
 - ip_forward: 该函数会先调用`netfilter`注册的`NF_INET_FORWARD`链上的相关函数，如果数据包没有被丢弃，那么将继续往后调用`dst_output_sk`函数。
 - dst_output_sk: 该函数会调用IP网络层的相应函数将该数据包发送出去，这一步将会在下一章节发送数据包中详细介绍。
