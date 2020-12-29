@@ -35,7 +35,7 @@ Kubernetes对容器技术做了更多的抽象，其中最重要的一点是提�
 
 ![networking-cni.jpg](https://i.loli.net/2020/02/04/Iz3AwFR6lPdbcmp.jpg)
 
-实现一个CNI网络插件只需要**一个配置文件**和**一个可执行的文件**：
+实现一个CNI网络插件只需要**一个配置文件**和**一个可执行文件**：
 
 - 配置文件描述插件的版本、名称、描述等基本信息
 - 可执行文件会被上层的容器管理平台调用，一个CNI可执行文件自需要实现将容器加入到网络的ADD操作以及将容器从网络中删除的DEL操作（以及一个可选的VERSION查看版本操作）
@@ -57,7 +57,7 @@ Kubernetes使用CNI网络插件的基本工作流程：
 
 ![pod-pause-container-netns.jpg](https://i.loli.net/2020/02/06/oCnKZ1SrV3Fjpzx.jpg)
 
-可以看到，同一个pod里面的其他容器共享`pause`容器创建的网络命名空间，也就是说，所有的容器共享相同的网络设备，路由表设置，服务端口等信息，仿佛是在同一台机器上运行的不同进程，所以这些容器之间可以直接通过`localhost`与对应的端口通信；对于集群外部的请求，则通过`docker0`网桥设备充当的网关，同时通过iptables做地址转换。我们会发现，这其实就是对当个容器的bridge网络模型的扩展。
+可以看到，同一个pod里面的其他容器共享`pause`容器创建的网络命名空间，也就是说，所有的容器共享相同的网络设备，路由表设置，服务端口等信息，仿佛是在同一台机器上运行的不同进程，所以这些容器之间可以直接通过`localhost`与对应的端口通信；对于集群外部的请求，则通过`docker0`网桥设备充当的网关，同时通过iptables做地址转换。到这里我们就会发现，这其实就是对单个容器的bridge网络模型的扩展。
 
 ## 主流kubernetes网络方案
 
@@ -89,14 +89,14 @@ Kubernetes使用CNI网络插件的基本工作流程：
 下表是几种主流Kubernetes网络方案的对比：
 
 | A | Overlay-Network | Host-RouteTable | NetworkPolicy Support | Decentralized IP Allocation |
-| -- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | Flannel | UDP/VXLAN | Host-GW | N | N |
 | Weave  | UDP/VXLAN | N/A | Y | Y |
 | Calico | IPIP | BGP | Y | N |
 
 ## 策略控制(Network Policy)
 
-Network Policy)是Kubernetes提供的基于策略的网络控制，用于隔离应用并提高安全性。它使用Kubernetes中常用的标签选择器模拟传统的分段网络，并通过策略控制它们之间的东西流量以及与外部交流的南北流量。
+Network Policy是Kubernetes提供的基于策略的网络控制，用于隔离应用并提高安全性。它使用Kubernetes中常用的标签选择器模拟传统的分段网络，并通过策略控制它们之间的东西流量以及与外部交流的南北流量。
 
 > Note: 确保使用的网络插件支持策略控制(Network Policy)，比如Flannel就没有实现Network Policy；
 
@@ -145,4 +145,4 @@ spec:
 2. 流量方向：`ingress`控制入pod流量，`egress`控制出pod流量
 3. 流量特征：对端-IP-协议-端口
 
-通过使用Network Policy可以实现对进出流的精确控制，它采用各种选择器（标签或namespace），找到一组满足条件的pod，或者找到相当于通信的两端，然后通过流量的特征描述来决定它们之间是不是可以连通，可以理解为一个白名单的机制。
+通过使用Network Policy可以实现对进出流量的精确控制，它采用各种选择器（标签或namespace），找到一组满足条件的pod，或者找到相当于通信的两端，然后通过流量的特征描述来决定它们之间是不是可以连通，可以理解为一个白名单的机制。

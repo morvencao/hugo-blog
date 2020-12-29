@@ -19,7 +19,7 @@ draft: false
 
 如果让我们自己实现一种类似于vm一样的虚拟技术，我们首先会想到的是怎么解决每个vm的进程与宿主机进程的隔离问题。2008年发布的linux内核v2.6.24带来的linux namespace特性使得我们可以对linux做各种各样的隔离。
 
-熟悉`chroot`命令的想哦同学都应该大体能猜到linux的namespace是如何发挥作用的，在linux系统中，系统默认的目录结构都是以根目录`/`开始的，`chroot`命令用来以指定的位置作为`/`来运行指令。与此类似，了解[linux启动流程](https://morven.life/notes/the_knowledge_of_linux/)的人都知道在linux启动的时候又一个Pid为1的`init`进程，其他所有的进程都由此衍生而来，`init`和其他衍生而来的进程形成以`init`进程为根节点树状结构，在同一个进程树里的进程要有足够的权限就可以审查甚至终止其他进程，这样，显然会带来安全性问题。而PID namespace（linux namespace的一种）允许我们创建单独的进程树，新进程树里面有自己的PID为`1`的进程，该进程一般为创建新进程树的时候指定。PID namespace使得不同进程树里面的进程相互直接不能直接访问，提供了进程间的隔离，甚至可以创建嵌套的进程树：
+熟悉`chroot`命令的同学都应该大体能猜到linux的namespace是如何发挥作用的，在linux系统中，系统默认的目录结构都是以根目录`/`开始的，`chroot`命令用来以指定的位置作为`/`来运行指令。与此类似，了解[linux启动流程](https://morven.life/notes/the_knowledge_of_linux/)的人都知道在linux启动的时候又一个Pid为1的`init`进程，其他所有的进程都由此衍生而来，`init`和其他衍生而来的进程形成以`init`进程为根节点树状结构，在同一个进程树里的进程要有足够的权限就可以审查甚至终止其他进程，这样，显然会带来安全性问题。而PID namespace（linux namespace的一种）允许我们创建单独的进程树，新进程树里面有自己的PID为`1`的进程，该进程一般为创建新进程树的时候指定。PID namespace使得不同进程树里面的进程相互直接不能直接访问，提供了进程间的隔离，甚至可以创建嵌套的进程树：
 
 ![pid-namespace.jpg](https://i.loli.net/2020/02/04/34f2VPtHXoTKcjw.jpg)
 
@@ -83,7 +83,7 @@ root      7851  7180  0 04:10 pts/1    00:00:00 sleep 100000
 
 上面提到一个进程树里面的进程不能与其他进程树里的进程交互，其实这是不完全对的。举例来说，一个进程树里面的进程会占有宿主机的资源(CPU/Memory/NetworkIO/DiskIO...)，这样有可能导致其他进程得不到足够的资源。幸亏我们可以使用linux内核通过[cgroup](https://en.wikipedia.org/wiki/Cgroups)来限制进程能占用的资源数量，这些资源包括CPU，内存，网络带宽，磁盘IO等。需要说明的是namespace和cgroup是两个不同的特性，上面提到的各种namespace有可能只用到其中的一种或者两种，与cgroup组合起来完成对一组进程的管理。
 
-举个例子，通过下面的命令我们创建一个cgroup：
+举个例子，通过`cgcreate`命令我们创建一个cgroup：
 
 ```
 # useradd morven
@@ -171,7 +171,7 @@ EOF
 # docker run -d --name nginx -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf --ipc=shareable -p 8080:80 nginx
 ```
 
-> Note: 在启动`nginx`容器的时候指定`--ipc=shareable`参数使得nginx容器的IPC namespace可以去其他容器共享。
+> Note: 在启动`nginx`容器的时候指定`--ipc=shareable`参数使得nginx容器的IPC namespace可以让其他容器共享。
 
 接下来，我们创建一个[hugo](https://gohugo.io/)站点并且启动一个容器运行该站点，为了保证`hugo`容器与`nginx`容器共享相同的namespace，我们需要在启动`hugo`容器的时候添加额外的参数来保证它与`nginx`容器共享同样的namespace：
 
@@ -198,11 +198,11 @@ EOF
 
 正如我们在上面这张涂上看到的那样，一旦我们使用pod创建了这些容器，它们就像运行在同一台机器上，可以使用`localhost`+`进程暴露的端口号`直接互相访问，可以共享相同的volume，甚至可以使用IPC给其他进程发送`HUP`或者`TERM`等信号（Kubernetes 1.7, Docker >=1.13），详情请参考：https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
 
-但是pod只是将多个共享相同的namespace的容器组合在一起这么简单么？我们看看下面一个更复杂的例子：
+但是pod只是将多个共享相同namespace的容器组合在一起这么简单么？我们看看下面一个更复杂的例子：
 
 ![pod-share-example.jpg](https://i.loli.net/2020/02/05/Tf3Fy6XtaIQ89KG.jpg)
 
-在这个例子中，nginx作为多个应用App的前段负载均衡器，它需要在每次应用app的IP地址池变化是加载新的配置文件，我们使用[confd](https://github.com/kelseyhightower/confd)来作为配置分发中心，`etcd`存储着所有应用app的IP地址池信息，并且一旦这些信息发生变化就给`confd`发送通知，从而`confd`生成新的配置文件并发送`HUB`信号给nginx进程来结束旧的进程，加载新配置文件来启动新的nginx进程。
+在这个例子中，nginx作为多个应用App的前段负载均衡器，它需要在每次应用App的IP地址池变化是加载新的配置文件，我们使用[confd](https://github.com/kelseyhightower/confd)来作为配置分发中心，`etcd`存储着所有应用app的IP地址池信息，并且一旦这些信息发生变化就给`confd`发送通知，从而`confd`生成新的配置文件并发送`HUB`信号给nginx进程来结束旧的进程，加载新配置文件来启动新的nginx进程。
 
 如果使用docker容器，我们首先想到的就是将`confd`和`nginx`进程放到同一个docker容器中，但是docker容器只允许一个entrypoint，这样我们就不得不创建一个supervisord进程来创建和管理`confd`和`nginx`进程，但问题是`nginx`进程需要不断重启，更重要的是通过docker API只能知道supervisord进程的健康状况，`confd`和`nginx`进程是否在正常运行是没法监测到的。
 
@@ -234,7 +234,7 @@ c4e998ec4d5d        gcr.io/google_containers/pause-amd64:3.0    "/pause" ...
 
 通过前面的介绍我们知道docker容器非常适合运行单一程序，但是要将几个程序组合在一个docker容器里面就会很笨重，相反，将他们拆分到不同的容器中并使用pod来组合这些容器是最有效的做法。但是，这些在同一个pod中的多个容器进程谁来创建最初的namespace呢，看起来谁都可以，但谁都不合适；更重要的是怎样对这些容器进程进行生命周期管理呢，我们知道pid为`1`的进程是整个pod进程树的根结点，它负责对其他进程的管理，包括[僵尸进程](https://en.wikipedia.org/wiki/Zombie_process)的回收。
 
-没错，在kubernetes中，正式`pause`容器充当每个pod中初始的容器，由它来创建namespace并且负责管理其他的容器进程的生命周期。
+没错，在kubernetes中，正式`pause`容器充当每个pod中初始的容器，由它来创建namespace并且负责管理其他容器进程的生命周期。
 
 我们就来看看怎么使用`pause`容器从零开始创建一个pod并且共享namespace，首先我们先启动`pause`容器：
 
