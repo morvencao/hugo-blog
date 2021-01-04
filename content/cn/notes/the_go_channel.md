@@ -15,11 +15,20 @@ draft: false
 
 ## Go Routine
 
-Go Routine是Go语言并行编程的核心概念之一，有人将它称作为“协程”，是比Thread更轻量级的并发单元，最小Go Routine只需极少的栈内存(大约是4~5KB)，这样十几个Go Routine的规模可能体现在底层就是五六个线程的大小，最高同时运行成千上万个并发任务；同时，Go语言内部实现了Go Routine之间的内存共享使得它比Thread更高效，更易用，我们不必再使用类似于晦涩难用的线程安全的队列库来同步数据。
+Go Routine是Go语言并行编程的核心概念之一，有人将它称作为“协程”，是比Thread更轻量级的并发单元，完全处于用户态并由Go语言运行时管理，最小Go Routine只需极少的栈内存(大约是4~5KB)，这样十几个Go Routine的规模可能体现在底层就是五六个线程的大小，最高同时运行成千上万个并发任务；同时，Go语言内部实现了Go Routine之间的内存共享使得它比Thread更高效，更易用，我们不必再使用类似于晦涩难用的线程安全的队列库来同步数据。
 
 ### 创建Go Routine
 
-要创建一个Go Routine，我们只需要在函数调⽤语句前添加`go`关键字，Go语言的调度器会自动将其安排到合适的系统线程上执行。实际上，我们在并发编程的过程中经常将一个大的任务分成好几块可以并行的小任务，为每一个小任务创建一个Go Routine。当一个程序启动时，其主函数即在一个单独的Go Routine中运行，我们叫它`main routine`，然后在主函数中使用`go`关键字来创建其他的Go Routine：
+要创建一个Go Routine，我们只需要在函数调⽤语句前添加`go`关键字，Go语言的调度器会自动将其安排到合适的系统线程上执行。
+
+```
+go f(x, y, z)
+```
+
+会启动一个新的 Go 程并执行`f(x, y, z)`，`f`, `x`, `y` 和 `z` 的求值发生在当前的Go Routine中，而`f`的执行发生在新的Go Routine中。
+
+
+实际上，我们在并发编程的过程中经常将一个大的任务分成好几块可以并行的小任务，为每一个小任务创建一个Go Routine。当一个程序启动时，其主函数即在一个单独的Go Routine中运行，我们叫它`main routine`，然后在主函数中使用`go`关键字来创建其他的Go Routine：
 
 ```
 func subTask() {
@@ -162,7 +171,9 @@ func main() {
 
 ## Go Channel
 
-有了Go Routine，我们可以并发地启动多个子任务，极大地提高处理的效率，但是当多个子任务之间有数据要同步怎么办？比如说我有两个子任务，子任务2必须等子任务1将处理了某个数据之后才能启动子任务2，怎么保证这样的数据共享与同步？这就是Go Channel的作用。
+有了Go Routine，我们可以并发地启动多个子任务，极大地提高处理的效率，但是当多个子任务之间有数据要同步怎么办？比如说我有两个子任务，子任务2必须等子任务1将处理了某个数据之后才能启动，怎么保证这样的数据共享与同步？
+
+Go Routine在相同的地址空间中运行，因此可以通过[sync包](https://golang.org/pkg/sync/)提供的锁机制对要访问的共享内存进行同步，不过这在Go语言中并不经常用到，更方便的办法是使用Go Channel。
 
 Go Channel是并发的Go Routine之间进行通信的一种方式，它与Unix中的管道机制类似，底层是一种先入先出（FIFO）的队列。
 
@@ -184,13 +195,15 @@ chan<- T        // only Send Data of type T
 <-chan int      // only Receive Data of type T
 ```
 
-Go Channel必须先创建再使用，和`map`和`slice`数据类型一样，我们使用`make`来创建Go Channel
+Go Channel必须先创建再使用，和`map`和`slice`数据类型一样，我们使用`make`来创建Go Channel:
 
 ```
 make(chan T[, capacity])
 ```
 
-可选的第二个参数`capacity`代表Go Channel最多可容纳元素的数量，代表Go Channel的缓存区的大小。如果没有设置容量，或者容量设置为0, 说明Go Channel没有缓存，只有sender和receiver都准备好了后它们的通讯才会发生(之前一直blocking)。如果设置了缓存，只有buffer满了后 sender才会被阻塞，而只有缓存空了后receiver才会被阻塞。一个`nil`的Go Channel不会通信。
+可选的第二个参数`capacity`代表Go Channel最多可容纳元素的数量，代表Go Channel的缓存区的大小。如果没有设置容量，或者容量设置为0, 说明Go Channel没有缓存，只有发送者和接收者都准备好了后它们的通讯才会发生(之前一直阻塞)。如果设置了缓存，只有buffer满了后发送者才会被阻塞，而只有缓存空了后接收者才会被阻塞。
+
+> Note: 一个值为`nil`的Go Channel不会通信
 
 ### Go Channel的操作
 
@@ -204,9 +217,9 @@ v, ok := <-ch // Receive value fron channel 'ch' and assign it to v, get the sta
 
 上面第三个例子的返回结果中`ok`用来检查Go Channel的状态，如果`ok`是`false`，表明接收的`v`是Channel传递类型的零值，这个Go Channel被关闭了或者为空。
 
-**Send**
+**发送**
 
-Send操作是用来往Go Channel中发送数据，如`ch <- 3`，它的定义如下:
+发送操作是用来往Go Channel中发送数据，如`ch <- 3`，它的定义如下:
 
 ```
 SendStmt = Channel "<-" Expression
@@ -223,23 +236,32 @@ i := <-c
 fmt.Println(i)
 ```
 
-Send操作被执行前通讯一直被阻塞着。如前所言，对于无缓存的Go Channel而言，只有在Receiver准备好后Send操作才被执行；如果有缓存，并且缓存未满，则send操作会立刻被执行。
+发送操作被执行前通讯一直被阻塞着。如前所言，对于无缓存的Go Channel而言，只有在接收者准备好后发送操作才被执行；如果有缓存，并且缓存未满，则发送操作会立刻被执行。
 
 > Note:
 > - 向一个已经被close的Go Channel中发送数据会导致`run-time panic`
-> - 向nil的Go Channel中发送数据会一直被block
+> - 向nil的Go Channel中发送数据会一直被阻塞
 
-**Receive**
+**接收**
 
-`<-ch`用来从Go Channel中接收数据，对于无缓存的Go Channel而言，只有在Sender准备好后receive操作才被执行；如果有缓存，并且缓存不为空，则receive操作会立刻被执行。
+`<-ch`用来从Go Channel中接收数据，对于无缓存的Go Channel而言，只有在发送者准备好后接收操作才被执行；如果有缓存，并且缓存不为空，则接收操作会立刻被执行。
+
+发送者可通过`close`关闭一个信道来表示没有需要发送的值了。接收者可以通过为接收表达式分配第二个参数来测试信道是否被关闭：若没有值可以接收且信道已被关闭，那么在执行完：
+
+```
+v, ok := <-ch
+```
+
+之后`ok`会被设置为`false`。
 
 > Note:
 > - 从nil的Go Channel中接收数据会一直被block
+> - 只有发送者才能关闭信道，而接收者不能
 > - 从一个被close的channel中接收数据不会被阻塞，而是立即返回，接收完已发送的数据后会返回元素类型的零值
 
 **Range**
 
-Go语言中的经常使用`for ... range`从Go Channel中读取所有值。
+Go语言中的经常使用`for ... range`从Go Channel中读取所有值，直到它被关闭：
 
 ```
 func main() {
@@ -261,9 +283,9 @@ func main() {
 
 **Select**
 
-`select`语句类似于`switch`语句，只是用来处理多个GO Routine通过Go Channel来实现并发通信的。`select`对应的`case`子句可以是Send表达式，也可以是Receive表达式，亦或者`default`表达式，`select`子句可以选择一组可能的Send操作和Receive操作去处理；如果有多个`case`子句都可以运行，`select`会随机公平地选出一个执行；如果没有`case`子句满足处理条件，则会默认选择`default`去处理；如果没有`default`子句存在，则`select`语句会一直被阻塞，直到某个`case`需要被处理。
+`select`语句类似于`switch`语句，只是用来处理多个GO Routine通过Go Channel来实现并发通信的。`select`对应的`case`子句可以是发送表达式，也可以是接收表达式，亦或者`default`表达式，`select`子句可以选择一组可能的发送操作和接收操作去处理；如果有多个`case`子句都可以运行，`select`会随机公平地选出一个执行；如果没有`case`子句满足处理条件，则会默认选择`default`去处理；如果没有`default`子句存在，则`select`语句会一直被阻塞，直到某个`case`需要被处理。
 
-> Note： 最多允许有一个`default`子句，它可以放在`case`子句列表的任何位置，但一般会将它放在最后。`nil` channel上的`select`操作会一直被阻塞；如果没有`default`子句，只有`nil`的Go Channel上的`select`语句会一直被阻塞。
+> Note： 最多允许存在一个`default`子句，它可以放在`case`子句列表的任何位置，但一般会将它放在最后；如果没有`default`子句，只有`nil`的Go Channel上的`select`语句会一直被阻塞。
 
 ```
 func fibonacci(c, quit chan int) {
@@ -340,7 +362,7 @@ timer1 := time.NewTimer(time.Second * 2)
 fmt.Println("Timer 1 expired")
 ```
 
-`ticker`是一个定时触发的计时器，它会以一个间隔(interval)向Go Channel发送一个事件(当前时间)，receiver可以以固定的时间间隔从Go Channel中读取事件。下面的例子每500毫秒触发一次，可以观察输出的时间：
+`ticker`是一个定时触发的计时器，它会以一个间隔(interval)向Go Channel发送一个事件(当前时间)，接收者可以以固定的时间间隔从Go Channel中读取事件。下面的例子每500毫秒触发一次，可以观察输出的时间：
 
 ```
 ticker := time.NewTicker(time.Millisecond * 500)
@@ -352,3 +374,49 @@ go func() {
 ```
 
 `timer`和`ticker`都可以通过`Stop()`方法来停止。一旦它停止，接收者不再会从返回的Go Channel中接收到数据了。
+
+## sync.Mutex
+
+我们已经看到Go Channel非常适合在各个Go Routine之间进行通信。但是如果我们并不需要通信呢？比如说，若我们只是想保证每次只有一个Go Routine能够访问一个共享的变量，从而避免冲突？
+
+这里涉及的概念叫做 **互斥(mutual exclusion)** ，我们通常使用 **互斥锁(Mutex)** 这一数据结构来提供这种机制。
+
+Go语言标准库中提供了`sync.Mutex`互斥锁类型及其两个方法：
+
+```
+Lock
+Unlock
+```
+
+我们可以通过在代码前调用`Lock`方法，在代码后调用`Unlock`方法来保证一段代码的互斥执行。也可以用`defer `语句来保证互斥锁一定会被解锁。
+
+```
+// SafeCounter is safe to use concurrently.
+type SafeCounter struct {
+	mu sync.Mutex
+	v  map[string]int
+}
+
+// Inc increments the counter for the given key.
+func (c *SafeCounter) Inc(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// Lock so only one goroutine at a time can access the map c.v.
+	c.v[key]++
+	
+}
+
+// Value returns the current value of the counter for the given key.
+func (c *SafeCounter) Value(key string) int {
+	return c.v[key]
+}
+
+func main() {
+	c := SafeCounter{v: make(map[string]int)}
+	for i := 0; i < 1000; i++ {
+		go c.Inc("somekey")
+	}
+	time.Sleep(time.Second)
+	fmt.Println(c.Value("somekey"))
+}
+```
