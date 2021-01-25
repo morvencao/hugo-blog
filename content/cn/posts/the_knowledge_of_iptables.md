@@ -1,7 +1,7 @@
 ---
 title: "从零开始认识iptables"
 date: 2017-05-20
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "容器网络(二)"
 date: 2020-03-20
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

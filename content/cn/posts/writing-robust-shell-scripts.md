@@ -1,7 +1,7 @@
 ---
 title: "编写健壮的Shell脚本"
 date: 2017-02-06
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

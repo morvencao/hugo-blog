@@ -1,7 +1,7 @@
 ---
 title: "一份好吃的Istio入门餐"
 date: 2019-06-23
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

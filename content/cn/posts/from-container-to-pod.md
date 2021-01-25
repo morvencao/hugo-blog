@@ -1,7 +1,7 @@
 ---
 title: "从container到pod"
 date: 2020-02-03
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "字符编码的前世今生"
 date: 2013-05-12
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

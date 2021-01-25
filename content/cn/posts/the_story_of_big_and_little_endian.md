@@ -1,7 +1,7 @@
 ---
 title: "Big Endian & Little Endian"
 date: 2013-03-26
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

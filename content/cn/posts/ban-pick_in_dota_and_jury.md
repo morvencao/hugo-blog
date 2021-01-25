@@ -1,7 +1,7 @@
 ---
 title: "Dota中的Ban&Pick机制与陪审团"
 date: 2015-10-09
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

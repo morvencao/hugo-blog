@@ -8,15 +8,14 @@ workflows:
 jobs:
   build:
     docker:
-      - image: cibuilds/hugo:0.55.6
+      - image: circleci/golang:1.15.7
     steps:
       - checkout
       - run:
           name: install
           command: |
-            apk add --update nodejs nodejs-npm
-            npm config set unsafe-perm true
-            npm install html-minifier -g
+            sudo apt install -y git minify
+            GO111MODULE=on go get github.com/gohugoio/hugo@v0.80.0
       - run:
           name: sync git repo
           command: |
@@ -30,7 +29,6 @@ jobs:
           name: build site
           command: |
             make site
-            html-minifier --input-dir ./public --output-dir ./public --collapse-whitespace --file-ext html
       - run:
           name: setup git
           command: |

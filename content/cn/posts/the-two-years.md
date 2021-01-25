@@ -1,7 +1,7 @@
 ---
 title: "毕业这两年"
 date: 2017-06-20
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

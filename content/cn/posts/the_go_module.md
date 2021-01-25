@@ -1,7 +1,7 @@
 ---
 title: "Go模块化编程"
 date: 2019-02-26
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

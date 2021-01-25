@@ -1,7 +1,7 @@
 ---
 title: "Linux数据包的接收与发送过程"
 date: 2020-01-27
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

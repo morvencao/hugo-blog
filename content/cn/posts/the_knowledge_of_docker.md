@@ -1,7 +1,7 @@
 ---
 title: "Docker知识点拾遗"
 date: 2018-11-13
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

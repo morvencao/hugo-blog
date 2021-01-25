@@ -1,7 +1,7 @@
 ---
 title: "深入理解PKI系统的与CA中心"
 date: 2014-11-12
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

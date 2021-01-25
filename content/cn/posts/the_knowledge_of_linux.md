@@ -1,7 +1,7 @@
 ---
 title: "Linux的启动流程"
 date: 2015-02-10
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

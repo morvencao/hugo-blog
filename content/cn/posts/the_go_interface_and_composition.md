@@ -1,7 +1,7 @@
 ---
 title: "5分钟系列 -「Go Interface & Composition」"
 date: 2018-02-26
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

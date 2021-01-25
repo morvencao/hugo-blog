@@ -1,7 +1,7 @@
 ---
 title: "请回答「2020」"
 date: 2020-12-31
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

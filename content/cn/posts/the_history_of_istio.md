@@ -1,7 +1,7 @@
 ---
 title: "Istio的前世今生"
 date: 2019-07-07
-type: "posts"
+categories: ['note', 'tech', 'thought']
 draft: false
 ---
 

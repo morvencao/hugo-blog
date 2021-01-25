@@ -1,7 +1,7 @@
 ---
 title: "5分钟系列 -「Go Routine & Channel」"
 date: 2018-04-26
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

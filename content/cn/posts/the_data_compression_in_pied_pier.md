@@ -1,7 +1,7 @@
 ---
 title: "聊聊Pied Pier的压缩算法"
 date: 2016-06-18
-type: "posts"
+categories: ['thought', 'tech']
 draft: false
 ---
 

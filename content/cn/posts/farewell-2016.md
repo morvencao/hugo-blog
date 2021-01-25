@@ -1,7 +1,7 @@
 ---
 title: "后会无期，2016"
 date: 2016-12-18
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

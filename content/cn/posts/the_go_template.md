@@ -1,7 +1,7 @@
 ---
 title: "5分钟系列 -「Go Template」"
 date: 2018-08-24
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

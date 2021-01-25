@@ -1,7 +1,7 @@
 ---
 title: "又是冬至日"
 date: 2017-12-22
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

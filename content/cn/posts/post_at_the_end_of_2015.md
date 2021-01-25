@@ -1,7 +1,7 @@
 ---
 title: "写在2015年年末"
 date: 2015-12-29
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Webpack使用小结"
 date: 2016-11-20
-type: "notes"
+categories: ['note', 'tech', 'thought']
 draft: false
 ---
 

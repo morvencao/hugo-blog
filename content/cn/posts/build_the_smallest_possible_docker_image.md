@@ -1,7 +1,7 @@
 ---
 title: "创建最小Docker镜像"
 date: 2019-01-20
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

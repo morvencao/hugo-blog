@@ -1,7 +1,7 @@
 ---
 title: "回首「2014」"
 date: 2014-12-26
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

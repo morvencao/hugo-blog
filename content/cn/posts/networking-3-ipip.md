@@ -1,7 +1,7 @@
 ---
 title: "揭秘IPIP隧道"
 date: 2020-02-12
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

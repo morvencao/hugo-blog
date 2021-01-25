@@ -1,7 +1,7 @@
 ---
 title: "Linux虚拟网络设备"
 date: 2020-01-30
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Deploy Istio Multcluster in IBM Cloud Private clusters using Gateway"
 date: 2019-03-18
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

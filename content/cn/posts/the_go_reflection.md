@@ -1,7 +1,7 @@
 ---
 title: "5分钟系列 -「Go Reflection」"
 date: 2018-09-12
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

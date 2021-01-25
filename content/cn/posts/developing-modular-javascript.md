@@ -1,7 +1,7 @@
 ---
 title: "Javascript模块化开发"
 date: 2016-10-16
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

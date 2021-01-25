@@ -1,7 +1,7 @@
 ---
 title: "IBM实习总结"
 date: 2013-04-01
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "创建私有CA以及颁发SSL证书"
 date: 2014-11-24
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

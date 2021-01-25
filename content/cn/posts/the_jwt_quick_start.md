@@ -1,7 +1,7 @@
 ---
 title: "JSON Web Token"
 date: 2016-04-20
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

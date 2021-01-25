@@ -1,7 +1,7 @@
 ---
 title: "大话「一致性哈希」"
 date: 2015-08-24
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

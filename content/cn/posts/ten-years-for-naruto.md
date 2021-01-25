@@ -1,7 +1,7 @@
 ---
 title: "十年，火影"
 date: 2017-10-10
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

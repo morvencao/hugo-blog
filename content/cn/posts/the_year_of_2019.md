@@ -1,7 +1,7 @@
 ---
 title: "我的「2019」"
 date: 2019-12-21
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

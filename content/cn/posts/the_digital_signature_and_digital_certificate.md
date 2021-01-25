@@ -1,7 +1,7 @@
 ---
 title: "数字签名与数字证书"
 date: 2014-10-06
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

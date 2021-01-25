@@ -1,7 +1,7 @@
 ---
 title: "MacBookPro开启HiDPI"
 date: 2019-04-12
-type: "posts"
+categories: ['note', 'tech']
 draft: false
 ---
 

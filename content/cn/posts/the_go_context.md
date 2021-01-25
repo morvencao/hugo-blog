@@ -1,7 +1,7 @@
 ---
 title: "5分钟系列 -「Go Context」"
 date: 2018-06-12
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 

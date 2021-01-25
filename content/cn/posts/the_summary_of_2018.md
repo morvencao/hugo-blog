@@ -1,7 +1,7 @@
 ---
 title: "重拾少年时期的「信仰」"
 date: 2018-12-28
-type: "posts"
+categories: ['life', 'thought']
 draft: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "密码学基础"
 date: 2014-09-16
-type: "notes"
+categories: ['note', 'tech']
 draft: false
 ---
 
