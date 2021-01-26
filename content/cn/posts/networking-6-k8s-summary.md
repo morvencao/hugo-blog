@@ -1,5 +1,5 @@
 ---
-title: "浅聊Kubernetes网络模型"
+title: "浅聊 Kubernetes 网络模型"
 date: 2020-04-10
 categories: ['note', 'tech']
 draft: false

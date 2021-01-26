@@ -1,5 +1,5 @@
 ---
-title: "揭秘IPIP隧道"
+title: "揭秘 IPIP 隧道"
 date: 2020-02-12
 categories: ['note', 'tech']
 draft: false

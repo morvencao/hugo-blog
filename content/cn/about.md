@@ -1,11 +1,11 @@
 ---
 title: "About Me"
 date: 2013-02-16
-type: "common"
+type: "page"
 draft: false
 ---
 
-Hi, This is Morven, graduated from [Nanjing University](http://www.nju.edu.cn/) with Bechalor and Master degree in 2015, now working as a software engineer at [IBM](http://www.ibm.com/) focusing on cloud technology. I generally use `morvencao` as my id on the Internet. I am a strong advocate and believer of Open Source Software and passionate about reading, thinking, programming and the possibility of time travel.
+Hi there, This is Morven, graduated from [Nanjing University](http://www.nju.edu.cn/) with Bachelor and Master degree in 2015, now working as a software engineer at [IBM](http://www.ibm.com/) focusing on cloud technology. I generally use `morvencao` as my id on the Internet. I'm a strong advocate and believer of OSS(Open Source Software) and passionate about reading, thinking, programming and the possibility of time travel.
 
 Reach me:
 
