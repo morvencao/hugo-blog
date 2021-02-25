@@ -1,5 +1,5 @@
 ---
-title: "初识 Kubernetes API"
+title: "初识 Kubernetes API 的组织结构"
 date: 2021-02-24
 categories: ['note', 'tech']
 draft: false
@@ -9,8 +9,8 @@ draft: false
 
 接下来的几篇笔记，我将由浅入深地学习 kubernetes API 的设计以及背后的原理。我的计划是这样的：
 
-1. 初识 kubernetes API 的设计与原理
-2. 深入 kubernetes API 源码实现机制
+1. 初识 kubernetes API 的组织结构
+2. 深入 kubernetes API 的源码实现
 3. 扩展 kubernetes API 的典型方式
 
 废话不多说，我们先来认识一下 kubernetes API 的基础结构以及背后的设计原理。
@@ -72,13 +72,13 @@ API 多版本支持一般通过将资源分组置于不同的版本中来实现�
 
 随着新的用户场景出现，kubernetes API 需要不断变化，可能是新增一个字段，也可能是删除旧的字段，甚至是改变资源的展现形式。为了保证兼容性，kubernetes 制定了一系列的[策略](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md)。总的来说，对于已经 GA 的 API，API，kubernetes 严格维护其兼容性，终端用户可以放心食用，beta 版本的 API 则尽量维护，保证不打破版本跨版本之间的交互，而对于 alpha 版本的 API 则很难保证兼容性，不太推荐生产环境使用。
 
-### GVK
+### GVK vs GVR
 
 在 kubernetes API 宇宙中，我们经常使用属于 GVK 或者 GVR 来区分特定的 kubernetes 资源。其中 GVK 是 Group Version Kind 的简称，而 GVR 则是 Group Version Resource 的简称。
 
 通过上面对于 kubernetes API 分组和多版本的介绍中我们已经了解了 Group 与 Version，那么 Kind 与 Resource 又分别是指什么呢？
 
-**Kind** 是 API 资源对象的类型，每个资源对象都需要 Kind 来区分它自身代表的资源类型，例如，对于一个 pod 的例子：
+**Kind** 是 API “顶级”资源对象的类型，每个资源对象都需要 Kind 来区分它自身代表的资源类型，例如，对于一个 pod 的例子：
 
 ```yaml
 apiVersion: v1
@@ -94,10 +94,120 @@ metadata:
 
 1. 单个资源对象的类型，最典型的就是刚才例子中提到的 Pod
 2. 资源对象的列表类型，例如 PodList 以及 NodeList 等
-3. 特殊类型的 Kind，例如对于非持久化操作的 `/binding` 以及执行特殊操作的 `/status`
+3. 特殊类型以及非持久化操作的类型，很多这种类型的资源是 subresource， 例如用于绑定资源的 `/binding`、更新资源状态的 `/status` 以及读写资源实例数量的 `/scale`
 
-需要注意的是，同 Kind 不止可以出现在统一分组的不同版本中，如 `apps/v1beta1` 与 `apps/v1`，它还可能出现在不同的分组中，例如 Deployment 开始以 alpha 的特性 出现在 `extensions` 分组，GA 之后被推进到 `apps` 组，所以为了严格区分不同的 Kind，需要组合 API Group、API Version 以及 Kind 成为 GVK。
+需要注意的是，同 Kind 不止可以出现在同一分组的不同版本中，如 `apps/v1beta1` 与 `apps/v1`，它还可能出现在不同的分组中，例如 Deployment 开始以 alpha 的特性出现在 `extensions` 分组，GA 之后被推进到 `apps` 组，所以为了严格区分不同的 Kind，需要组合 API Group、API Version 与 Kind 成为 **GVK**。
 
-**Resource** 则是通过 HTTP 协议以 JSON 格式发送或者读取的资源展现形式，可以以单个资源对象展现，例如 `.../namespaces/default`，也可以以列表的形式展现，例如 `.../jobs`。
+**Resource** 则是通过 HTTP 协议以 JSON 格式发送或者读取的资源展现形式，可以以单个资源对象展现，例如 `.../namespaces/default`，也可以以列表的形式展现，例如 `.../jobs`。要正确的请求资源对象，API-Server 必须知道 `apiVersion` 与请求的资源，这样 API-Server 才能正确地解码请求信息，这些信息正是处于请求的资源路径中。一般来说，把 API Group、API Version 以及 Resource 组合成为 GVR 可以区分特定的资源请求路径，例如 `/apis/batch/v1/jobs` 就是请求所有的 jobs 信息。
 
-API Group、API Version 以及 Resource 组合成为 GVR 可以区分特定的资源请求路径，例如 `/apis/batch/v1/jobs` 就是请求所有的 jobs 信息。
+关于 kubernetes API 的详细规范请参考 [API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md)
+
+## 如何储存
+
+经过上一章节的研究，我们已经知道了 kubernetes API 的组织结构以及背后的设计原理，那么，Kubernetes API 的资源对象最终是怎么提供可靠存储的。之前也提到了 API-Server 是无状态的，它需要与分布式存储系统 [etcd](https://etcd.io/) 交互来实现资源对象的持久化操作。从概念上讲，etcd 支持的数据模型是键值（key-value）存储。在 etcd2 中，各个 key 是以层次结构存在，而在 etcd3 中这个就变成了平级模型，但为了保证兼容性也保持了层次结构的方式。
+
+在 Kubernetes 中 etcd 是如何使用的呢？实际上，前面也提到了，etcd 被部署为独立的部分，甚至多个 etcd 可以组成集群，API-Server 负责与 etcd 交互来完成资源对象的持久化。从 1.5.x 之后，Kubernetes 开始全面使用 etcd3。可以在 API-Server 的相关启动项参数中配置使用 etcd 的方式：
+
+```bash
+# kube-apiserver -h
+...
+Etcd flags:
+
+      --etcd-cafile string
+                SSL Certificate Authority file used to secure etcd communication.
+      --etcd-certfile string
+                SSL certification file used to secure etcd communication.
+      ...
+      --etcd-keyfile string
+                SSL key file used to secure etcd communication.
+      --etcd-prefix string
+                The prefix to prepend to all resource paths in etcd. (default "/registry")
+      ...
+      --storage-backend string
+                The storage backend for persistence. Options: 'etcd3' (default).
+      --storage-media-type string
+                The media type to use to store objects in storage. Some resources or storage backends may only support a specific media type and will ignore this setting. (default
+                "application/vnd.kubernetes.protobuf")
+...
+```
+
+Kubernetes 资源对象是以 JSON 或 Protocol Buffers 格式存储在 etcd 中，这可以通过配置 kube-apiserver 的启动参数 `--storage-media-type` 来决定想要序列化数据存入 etcd 的格式，默认情况下为 `application/vnd.kubernetes.protobuf` 格式；另外也可以通过配置 `--storage-versions` 启动参数来配置每个API 分组的资源对象的持久化存储的默认版本号。
+
+下面通过一个简单的例子来看，创建一个 pod，然后使用 etcdctl 工具来查看存储在 etcd 中数据：
+
+```bash
+# cat << EOF | kubectl create -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+EOF
+pod/webserver created
+# etcdctl --endpoints=$ETCD_URL \
+  --cert /etc/kubernetes/pki/etcd/server.crt \
+  --key /etc/kubernetes/pki/etcd/server.key \
+  --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  get /registry/pods/default/webserver --prefix -w simple
+/registry/pods/default/webserver
+...
+10.244.0.5"
+```
+
+使用各种客户端工具创建资源对象到然后存储到 etcd 的流程大致如下图所示：
+
+![API-server-serialization-overview.png](https://i.loli.net/2021/02/25/qlbvT9NuFoQ3XcE.png)
+
+1. 客户端工具（例如 kubectl）提供一个期望状态的资源对象的序列化表示，该例子使用 YAML 格式提供
+2. kubectl 将 YAML 转换为 JSON 格式，并发送给 API-Server
+3. 对应同类型对象的不同版本，API-Server 执行无损转换。对于老版本中不存在的字段则存储在 annotations 中
+4. API-Server 将接收到的对象转换为规范存储版本，这个版本由 API-Server 启动参数指定，一般是最新的稳定版本
+5. 最后将资源对象通过 JSON 或 protobuf 方式解析并通过一个特定的 key 存入etcd当中
+
+上面提到的无损转换是如何进行的？下面使用 Kubernetes 资源对象对象 Horizontal Pod Autoscaling (HPA) 来举例说明：
+
+```bash
+# kubectl proxy --port=8080 &
+# cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver
+spec:
+  selector:
+    matchLabels:
+      app: webserver
+  template:
+    metadata:
+      labels:
+        app: webserver
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+EOF
+# kubectl autoscale deployment webserver --min=2 --max=5 --cpu-percent=80
+# curl http://127.0.0.1:8001/apis/autoscaling/v2beta1/namespaces/default/horizontalpodautoscalers/webserver > hpa-v2beta1.json
+# curl http://127.0.0.1:8001/apis/autoscaling/v2beta2/namespaces/default/horizontalpodautoscalers/webserver > hpa-v2beta2.json
+# diff hpa-v2beta1.json hpa-v2beta2.json
+3c3
+<   "apiVersion": "autoscaling/v2beta1",
+---
+>   "apiVersion": "autoscaling/v2beta2",
+42c42,45
+<           "targetAverageUtilization": 80
+---
+>           "target": {
+>             "type": "Utilization",
+>             "averageUtilization": 80
+>           }
+```
+
+通过上面命令的输出能够看出，即使 HorizontalPodAutoscale 的版本从 v2beta1 变为了 v2beta2，API-Server 也能够在不同的版本之前无损转换，不论在 etcd 中实际存的是哪个版本。实际上，API-Server 将所有已知的 Kubernetes 资源类型保存在名为 Scheme 的注册表（registry）中。在此注册表中，定义了每种 Kubernetes 资源的类型、分组、版本以及如何转换它们，如何创建新对象，以及如何将对象编码和解码为 JSON 或 protobuf 格式的序列化形式。
