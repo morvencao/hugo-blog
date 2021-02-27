@@ -72,7 +72,7 @@ API 多版本支持一般通过将资源分组置于不同的版本中来实现�
 
 随着新的用户场景出现，kubernetes API 需要不断变化，可能是新增一个字段，也可能是删除旧的字段，甚至是改变资源的展现形式。为了保证兼容性，kubernetes 制定了一系列的[策略](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api_changes.md)。总的来说，对于已经 GA 的 API，API，kubernetes 严格维护其兼容性，终端用户可以放心食用，beta 版本的 API 则尽量维护，保证不打破版本跨版本之间的交互，而对于 alpha 版本的 API 则很难保证兼容性，不太推荐生产环境使用。
 
-### GVK vs GVR
+### GVK 与 GVR 映射
 
 在 kubernetes API 宇宙中，我们经常使用属于 GVK 或者 GVR 来区分特定的 kubernetes 资源。其中 GVK 是 Group Version Kind 的简称，而 GVR 则是 Group Version Resource 的简称。
 
@@ -99,6 +99,14 @@ metadata:
 需要注意的是，同 Kind 不止可以出现在同一分组的不同版本中，如 `apps/v1beta1` 与 `apps/v1`，它还可能出现在不同的分组中，例如 Deployment 开始以 alpha 的特性出现在 `extensions` 分组，GA 之后被推进到 `apps` 组，所以为了严格区分不同的 Kind，需要组合 API Group、API Version 与 Kind 成为 **GVK**。
 
 **Resource** 则是通过 HTTP 协议以 JSON 格式发送或者读取的资源展现形式，可以以单个资源对象展现，例如 `.../namespaces/default`，也可以以列表的形式展现，例如 `.../jobs`。要正确的请求资源对象，API-Server 必须知道 `apiVersion` 与请求的资源，这样 API-Server 才能正确地解码请求信息，这些信息正是处于请求的资源路径中。一般来说，把 API Group、API Version 以及 Resource 组合成为 GVR 可以区分特定的资源请求路径，例如 `/apis/batch/v1/jobs` 就是请求所有的 jobs 信息。
+
+GVR 常用于组合成 RESTful API 请求路径。例如，针对应用程序 v1 部署的 RESTful API 请求如下所示：
+
+```
+GET /apis/apps/v1/namespaces/{namespace}/deployments/{name}
+```
+
+通过获取资源的 JSON 或 YAML 格式的序列化对象，进而从资源的类型信息中可以获得该资源的 GVK；相反，通过 GVK 信息则可以获取要读取的资源对象的 GVR，进而构建 RESTful API 请求获取对应的资源。这种 GVK 与 GVR 的映射叫做 RESTMapper。Kubernetes 定义了 [RESTMapper 接口](https://github.com/kubernetes/apimachinery/blob/master/pkg/api/meta/interfaces.go)并带默认带有实现 [DefaultRESTMapper](https://github.com/kubernetes/apimachinery/blob/master/pkg/api/meta/restmapper.go)。 
 
 关于 kubernetes API 的详细规范请参考 [API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md)
 

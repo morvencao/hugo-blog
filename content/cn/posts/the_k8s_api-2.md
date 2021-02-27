@@ -460,11 +460,177 @@ func (in *ConfigMap) DeepCopyObject() runtime.Object {
 }
 ```
 
+### metav1.Unstructured
+
+metav1.Unstructured 与具体实现 rutime.Object 接口的类型（如 Pod、Deployment、Service 等等）不同，如果说，各个实现 rutime.Object 接口的类型主要用于 [client-go](https://github.com/kubernetes/client-go) 类型化的静态客户端，那么 metav1.Unstructured 则用于动态客户端。
+
+在看 metav1.Unstructured 源码实现之前，我们先了解一下什么是结构化数据与非结构化数据。结构化数据，顾名思义，就是数据中的字段名与字段值都是固定的，例如一个 JSON 格式的字符串表示一个学生的信息：
+
+```json
+{
+    
+	"id": 101,
+	"name": "Tom"
+}
+```
+
+定义这个学生的数据格式中的字段名与字段值都是固定的，我们很容易使用 Go 语言写出一个 struct 结构来表示这个学生的信息，各个字段意义明确：
+
+```golang
+type Student struct {
+    
+	ID int
+	Name String
+}
+```
+
+实际的情况是，一个格式化的字符串里面可能会包含很多编译时未知的信息，这些信息只有在运行时才能获取到。例如，上面的学生的数据中还包括第三个字段，该字段的类型和内容代码编译时未知，到运行时才可以获取具体的值。如何处理这种情况呢？熟悉反射的同学很快就应该想到，Go 语言可以依赖于反射机制在运行时动态获取各个字段，在编译阶段，我们将这些未知的类型统一为 `interface{}`。正是基于此，metav1.Unstructured 的数据结构定义很简单：
+
+```golang
+// soure code from: https://github.com/kubernetes/apimachinery/blob/master/pkg/apis/meta/v1/unstructured/unstructured.go
+//
+type Unstructured struct {
+    
+	// Object is a JSON compatible map with string, float, int, bool, []interface{}, or
+	// map[string]interface{} children.
+	Object map[string]interface{}
+}
+```
+
+事实上，metav1.Unstructured 是 apimachinery 中 runtime.Unstructured 接口的具体实现，runtime.Unstructured 接口定义了非结构化数据的操作接口方法列表，它提供程序来处理资源的通用属性，例如 metadata.namespace 等。
+
+```golang
+// soure code from: https://github.com/kubernetes/apimachinery/blob/master/pkg/runtime/interfaces.go
+//
+// Unstructured objects store values as map[string]interface{}, with only values that can be serialized
+// to JSON allowed.
+type Unstructured interface {
+	Object
+	// NewEmptyInstance returns a new instance of the concrete type containing only kind/apiVersion and no other data.
+	// This should be called instead of reflect.New() for unstructured types because the go type alone does not preserve kind/apiVersion info.
+	NewEmptyInstance() Unstructured
+	// UnstructuredContent returns a non-nil map with this object's contents. Values may be
+	// []interface{}, map[string]interface{}, or any primitive type. Contents are typically serialized to
+	// and from JSON. SetUnstructuredContent should be used to mutate the contents.
+	UnstructuredContent() map[string]interface{}
+	// SetUnstructuredContent updates the object content to match the provided map.
+	SetUnstructuredContent(map[string]interface{})
+	// IsList returns true if this type is a list or matches the list convention - has an array called "items".
+	IsList() bool
+	// EachListItem should pass a single item out of the list as an Object to the provided function. Any
+	// error should terminate the iteration. If IsList() returns false, this method should return an error
+	// instead of calling the provided function.
+	EachListItem(func(Object) error) error
+}
+```
+
+只有 metav1.Unstructured 的定义并不能发挥什么作用，真正重要的是其实现的方法，借助这些方法可以灵活的处理非结构化数据。metav1.Unstructured 实现了存取类型元信息与对象元信息的方法，除此之外，它也实现了 runtime.Unstructured 接口中的所有方法。
+
+基于这些方法，我们可以构建操作 kubernetes 资源的动态客户端，不需要使用 k8s.io/api 中定义的 Go 类型，使用 metav1.Unstructured 非结构化直接解码是 YAML/JSON 对象表示形式；非结构化数据编码时生成的 JSON/YAML 外也不会添加额外的字段。
+
+以下示例演示了如何将 YAML 清单读为非结构化，非结构化并将其编码回 JSON：
+
+```golang
+import (
+    "encoding/json"
+    "fmt"
+    "os"
+
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+    "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+)
+
+const dsManifest = `
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: example
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      name: nginx-ds
+  template:
+    metadata:
+      labels:
+        name: nginx-ds
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+`
+
+func main() {
+    obj := &unstructured.Unstructured{}
+
+    // decode YAML into unstructured.Unstructured
+    dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+    _, gvk, err := dec.Decode([]byte(dsManifest), nil, obj)
+
+    // Get the common metadata, and show GVK
+    fmt.Println(obj.GetName(), gvk.String())
+
+    // encode back to JSON
+    enc := json.NewEncoder(os.Stdout)
+    enc.SetIndent("", "    ")
+    enc.Encode(obj)
+}
+```
+
+程序的输出如下：
+
+```json
+example apps/v1, Kind=DaemonSet
+{
+    "apiVersion": "apps/v1",
+    "kind": "DaemonSet",
+    "metadata": {
+        "name": "example",
+        "namespace": "default"
+    },
+    "spec": {
+        "selector": {
+            "matchLabels": {
+                "name": "nginx-ds"
+            }
+        },
+        "template": {
+            "metadata": {
+                "labels": {
+                    "name": "nginx-ds"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "image": "nginx:latest",
+                        "name": "nginx"
+                    }
+                ]
+            }
+        }
+    }
+}
+```
+
+此外，通过 Go 语言的反射机制可以实现 metav1.Unstructured 对象与具体资源对象的相互转换，runtime.unstructuredConverter 接口定义了 metav1.Unstructured 对象与具体资源对象的相互转换方法，并且内置了 runtime.DefaultUnstructuredConverter 实现了 runtime.unstructuredConverter 接口。
+
+```golang
+// source code from: https://github.com/kubernetes/apimachinery/blob/master/pkg/runtime/converter.go
+//
+// UnstructuredConverter is an interface for converting between interface{}
+// and map[string]interface representation.
+type UnstructuredConverter interface {
+	ToUnstructured(obj interface{}) (map[string]interface{}, error)
+	FromUnstructured(u map[string]interface{}, obj interface{}) error
+}
+```
+
 ## 小结
 
 为了便于记忆，现在对前面介绍的各种接口以及实现做一个小结：
 
-![k8s-apimachinery.jpg](https://i.loli.net/2021/02/25/TE1IG6mqYi89jfv.jpg)
+![k8s-apimachinery.jpg](https://i.loli.net/2021/02/27/6OjGi3QcaCbTrun.jpg)
 
 1. runtime.Object 接口是所有 API 单体资源对象的根类，各个 API 对象的编码与解码依赖于该接口类型；
 2. schema.ObjectKind 接口是对 API 资源对象类型的抽象，可以用来获取或者设置 GVK；
@@ -473,3 +639,5 @@ func (in *ConfigMap) DeepCopyObject() runtime.Object {
 5. metav1.TypeMeta 结构体实现了 schema.ObjectKind 接口，所有的 API 资源类型继承它；
 6. metav1.ObjectMeta 结构体实现了 metav1.Object 接口，所有的 API 资源类型继承它；
 7. metav1.ListMeta 结构体实现了 metav1.ListInterface 接口，所有的 API 资源对象列表类型继承它；
+8. metav1.Unstructured 结构体实现了 runtime.Unstructured 接口，可以用于构建动态客户端，从 metav1.Unstructured 的实例中可以获取资源类型元信息与资源对象元信息，还可以获取到对象的 map[string]interface{} 的通用内容表示；
+9. metav1.Unstructured 与实现了 metav1.Object 接口具体 API 类型进行相互转化，转换依赖于 runtime.UnstructuredConverter 的接口方法。
